@@ -1,7 +1,25 @@
-# pico2-secure-bootchain
+# Pico2 Secure Bootchain
 
-# *Threat Model*
+## *Embedded System Security Architecture*
 
-# *Attack Scenarios*
+### *Threat Model*
 
-# *Security Design*
+#### *Assets*
+#### *Attackers*
+#### *Attacker Capabilities*
+#### *Assumptions*
+
+### *Attack Scenarios*
+
+#### *Malicious Firmware Installation*
+#### *OTA Firmware Tampering*
+#### *Physical Firmware Replacement*
+#### *Supply Chain Attack*
+
+### *Security Design*
+
+#### *Root of Trust*
+#### *Secure Boot*
+#### *Firmware Signing*
+#### *Secure OTA updates*
+#### *Securing the Build and Update Chain*
