@@ -1,12 +1,10 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.13)
 
-set(PICO_PLATFORM rp2350)
-set(PICO_BOARD pico2)
+set(PICO_BOARD pico2 CACHE STRING "Board type")
+include(${CMAKE_CURRENT_LIST_DIR}/cmake/pico_sdk_import.cmake)
 
-include(cmake/pico_sdk_import.cmake)
-
-project(ThesisProject C CXX ASM)
-
+project(pico2_bootchain)
 pico_sdk_init()
 
 add_subdirectory(bootloader)
+add_subdirectory(firmware)
