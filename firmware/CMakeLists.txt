@@ -10,6 +10,11 @@ add_executable(firmware main.c)
 
 target_link_libraries(firmware pico_stdlib hardware_gpio)
 
-pico_add_extra_outputs(firmware)
+add_custom_command(TARGET firmware POST_BUILD
+    COMMAND arm-none-eabi-objcopy -O binary firmware.elf firmware.bin
+    COMMAND python3 ${CMAKE_SOURCE_DIR}/tools/uf2conv.py firmware.bin -o firmware.uf2 --family RP2350_ARM_S --base 0x10040000
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+    COMMENT "Generating firmware.uf2"
+)
 
-target_link_options(firmware PRIVATE -Wl,--section-start=.text=0x10040000)
+pico_set_linker_script(firmware ${CMAKE_CURRENT_SOURCE_DIR}/firmware.ld)

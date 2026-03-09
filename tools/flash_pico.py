@@ -2,8 +2,19 @@ import os
 import subprocess
 import shutil
 import platform
+import argparse
 
-FIRMWARE = "build/bootloader/ThesisProject.uf2"
+BOOTLOADER = "build/bootloader/bootloader.uf2"
+FIRMWARE = "build/firmware/firmware.uf2"
+
+parser = argparse.ArgumentParser()
+
+group = parser.add_mutually_exclusive_group(required=True)
+group.add_argument("--bootloader", action="store_true", help="Flash bootloader")
+group.add_argument("--firmware", action="store_true", help="Flash firmware")
+
+args = parser.parse_args()
+
 
 def get_system_name():
     return platform.system()
@@ -25,22 +36,22 @@ def find_pico_drive(system_name: str):
         ).decode(errors="ignore")
 
     for line in result.splitlines():
-        if "RPI-RP2" in line:
+        if "RP2350" in line:
             if system_name == "Windows":
                 return line.strip().split()[0] + "\\"
             elif system_name == "Linux":
                 return line.strip().split()[1] # return mountpoint
     return None
 
-def flash_pico(firmware: str, drive: str, system_name: str):
+def flash_pico(file: str, drive: str):
     
-    if not os.path.exists(firmware):
-        print("Firmware file not found:", firmware)
+    if not os.path.exists(file):
+        print("Firmware file not found:", file)
         return
         
     try:
-        dest = os.path.join(drive, os.path.basename(firmware))
-        shutil.copy(firmware, dest)
+        dest = os.path.join(drive, os.path.basename(file))
+        shutil.copy(file, dest)
         print("Firmware was successfully flashed to the Pico!")
 
     except Exception as e:
@@ -60,8 +71,11 @@ def run():
             
                 if answ.strip().lower() == 'y':
                     print("Flashing...")
-                    flash_pico(FIRMWARE, drive_found, system_name)
-                    print("Flash was successful!")
+                    
+                    if args.bootloader:
+                        flash_pico(BOOTLOADER, drive_found)
+                    elif args.firmware:
+                        flash_pico(FIRMWARE, drive_found)
                     break
                 elif answ == 'n':
                     print("Flash cancelled")
