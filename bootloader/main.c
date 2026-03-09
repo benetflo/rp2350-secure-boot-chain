@@ -1,31 +1,20 @@
 #include <stdint.h>
-#include "hardware/gpio.h"
-#include "pico/time.h"
 
-#define LED_PIN         15
-#define FIRMWARE_BASE   0x10040000
+#define FIRMWARE_BASE 0x10040000                                        // Start address of firmware in flash
 
-int main() {
-    gpio_init(LED_PIN);
-    gpio_set_dir(LED_PIN, GPIO_OUT);
+int main(void) {
+    
+    // Firmware's vector table starts at FIRMWARE_BASE
+    // First 4 bytes = stack pointer value (an address in RAM e.g. 0x20082000)
+    // Next 4 bytes  = reset handler address (an address in flash e.g. 0x100400e5)
+    uint32_t sp  = *(volatile uint32_t *)(FIRMWARE_BASE + 0);           
+    uint32_t rst = *(volatile uint32_t *)(FIRMWARE_BASE + 4);           
 
-    /* 3 blinkar = bootloader kör */
-    for (int i = 0; i < 3; i++) {
-        gpio_put(LED_PIN, 1); sleep_ms(200);
-        gpio_put(LED_PIN, 0); sleep_ms(200);
-    }
-    sleep_ms(300);
-
-    /* Läs SP och reset-handler från firmware vektortabell */
-    uint32_t sp  = *(volatile uint32_t *)(FIRMWARE_BASE + 0);
-    uint32_t rst = *(volatile uint32_t *)(FIRMWARE_BASE + 4);
-
-    /* Hoppa till firmware */
     __asm__ volatile (
-        "msr msp, %0\n"
-        "bx  %1\n"
-        : : "r"(sp), "r"(rst)
+        "msr msp, %0\n"                 // Set the stack pointer to the value we read from firmware.This must be done before jumping so firmware has a valid stack
+        "bx  %1\n"                      // Jump to firmware's reset handler - From here SDK takes over - initializes clocks, memory and calls main()
+        : : "r"(sp), "r"(rst)           // Load sp and rst into CPU registers before executing assembly
     );
 
-    while(1);
+    while(1);       // this will never be reached
 }

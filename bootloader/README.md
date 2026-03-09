@@ -1,0 +1,14 @@
+*Power on*
+- ROM bootloader starts
+- Finds IMAGE_DEF in flash and validates it. If successful:
+    - Reads vector table at 0x10000000
+    - Sets stack pointer (slot 0) - Hardware register that always points to the top of the stack
+    - Jumps to _reset_handler (slot 1) in crt0.S
+        - Copies .data from flash to RAM
+        - Zeros .bss in RAM
+        - Calls main() in main.c
+            - Reads firmware vector table at 0x10040000
+            - Sets firmware stack pointer
+            - Jumps to firmware reset handler
+                - SDK initializes clocks, VTOR etc.
+                - Firmware main() runs
