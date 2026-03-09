@@ -30,3 +30,26 @@ The primary assets in this system are the integrity of the firmware, the cryptog
 #### *Firmware Signing*
 #### *Secure OTA updates*
 #### *Securing the Build and Update Chain*
+
+
+- Install Pico SDK
+
+
+
+- Download Picotool
+```
+sudo apt install cmake libusb-1.0-0-dev pkg-config git
+git clone https://github.com/raspberrypi/picotool.git
+cd picotool
+mkdir build && cd build
+cmake .. -DPICO_SDK_PATH=/home/benji/pico-sdk
+make
+sudo make install
+picotool version
+```
+
+- Install uf2conv (NOTE: included in the repo)
+```
+wget https://raw.githubusercontent.com/microsoft/uf2/master/utils/uf2conv.py
+wget https://raw.githubusercontent.com/microsoft/uf2/master/utils/uf2families.json
+```
