@@ -18,17 +18,11 @@ ENTRY(_reset_handler)                               /* First function to run at 
 SECTIONS {
     .text : {
         KEEP(*(.vectors))                           /* Vector table must be first in flash */
+        KEEP(*(.embedded_block))                    /* IMAGE_DEF start block - required by ROM bootloader     \ IMAGE_DEF needs to be placed within the first  4096 bytes of flash  */
+        KEEP(*(.embedded_end_block))                /* IMAGE_DEF end block - completes the metadata loop      / This is because ROM only scans the first 4096 bytes                 */
         *(.text*)                                   /* All code (assembly and C code for the bootloader)*/
         *(.rodata*)                                 /* Read-only data (constants) */
     } > FLASH                                       /* Place in flash */
-
-    .embedded_block : {
-        KEEP(*(.embedded_block))                    /* IMAGE_DEF start block - required by ROM bootloader */
-    } > FLASH
-
-    .embedded_end_block : {
-        KEEP(*(.embedded_end_block))                /* IMAGE_DEF end block - completes the metadata loop */
-    } > FLASH
 
     __etext = .;                        
 
