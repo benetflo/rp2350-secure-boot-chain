@@ -67,9 +67,45 @@ wget https://raw.githubusercontent.com/microsoft/uf2/master/utils/uf2conv.py
 wget https://raw.githubusercontent.com/microsoft/uf2/master/utils/uf2families.json
 ```
 
-- Install openssl and generate keys
+- Install openssl and generate firmware keys
 ```
 sudo apt install openssl
 openssl genpkey -algorithm ed25519 -out private_key.pem
 openssl pkey -in private_key.pem -pubout -out public_key.pem
+```
+
+# Activating secure boot on RP2350 (CRITICAL SECTION, ERRORS HERE COULD BRICK SECURE BOOT)
+
+> **DISCLAIMER:** This guide is provided as-is for educational purposes. I take no responsibility 
+> for bricked devices, lost keys, or any other damages resulting from following these instructions. 
+> Do your own research before burning OTP — it is a permanent and irreversible operation.
+
+- Create keys (signing of bootloader is done during build stage)
+```
+openssl ecparam -name secp256k1 -genkey -noout -out bootloader_private_key.pem
+openssl ec -in bootloader_private_key.pem -pubout -out bootloader_public_key.pem
+```
+
+- Build project
+```
+bash proj_build.sh
+```
+
+- Verify that key-hash is correct (should be the same)
+```
+openssl ec -in bootloader_private_key.pem -pubout -outform DER | tail -c 65 | tail -c 64 | sha256sum
+python3 -c "import json; otp=json.load(open('otp.json')); print(''.join(f'{b:02x}' for b in otp['bootkey0']))"
+```
+
+- If using WSL on Windows, expose RP2350 via usbipd before programming OTP
+```
+winget install usbipd
+usbipd list
+usbipd bind --busid <busid>
+usbipd attach --wsl --busid <busid>
+```
+
+- Program OTP and burn bootloader key PERMANENTLY
+```
+sudo picotool otp load otp.json
 ```
