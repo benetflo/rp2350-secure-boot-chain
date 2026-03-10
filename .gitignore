@@ -59,3 +59,4 @@ dkms.conf
 build/
 uf2/
 picotool/
+private_key.pem

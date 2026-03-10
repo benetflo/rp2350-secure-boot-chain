@@ -24,3 +24,4 @@ PICO_SDK_PATH=/home/benji/pico-sdk cmake -B build
 cmake --build build
 
 cp build/firmware/firmware.uf2 uf2/
+

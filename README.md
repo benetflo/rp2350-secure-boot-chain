@@ -32,6 +32,19 @@ The primary assets in this system are the integrity of the firmware, the cryptog
 #### *Securing the Build and Update Chain*
 
 
+*Before building...*
+## Requirements
+- arm-none-eabi-gcc
+- picotool
+- openssl
+- python3
+- Pico SDK at `/home/benji/pico-sdk` (or set `PICO_SDK_PATH`) *FIX THIS PATH*
+
+- Clone this repository
+```
+git clone --recurse-submodules https://github.com/benetflo/pico2-secure-bootchain.git
+```
+
 - Install Pico SDK
 
 
@@ -48,8 +61,15 @@ sudo make install
 picotool version
 ```
 
-- Install uf2conv (NOTE: included in the repo)
+- Install uf2conv (NOTE: included in the repo so not really needed)
 ```
 wget https://raw.githubusercontent.com/microsoft/uf2/master/utils/uf2conv.py
 wget https://raw.githubusercontent.com/microsoft/uf2/master/utils/uf2families.json
+```
+
+- Install openssl and generate keys
+```
+sudo apt install openssl
+openssl genpkey -algorithm ed25519 -out private_key.pem
+openssl pkey -in private_key.pem -pubout -out public_key.pem
 ```
