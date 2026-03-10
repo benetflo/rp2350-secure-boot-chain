@@ -33,6 +33,17 @@ The primary assets in this system are the integrity of the firmware, the cryptog
 
 
 *Before building...*
+## Requirements
+- arm-none-eabi-gcc
+- picotool
+- openssl
+- python3
+- Pico SDK at `/home/benji/pico-sdk` (or set `PICO_SDK_PATH`) *FIX THIS PATH*
+
+- Clone this repository
+```
+git clone --recurse-submodules https://github.com/benetflo/pico2-secure-bootchain.git
+```
 
 - Install Pico SDK
 
