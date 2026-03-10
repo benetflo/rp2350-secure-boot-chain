@@ -35,6 +35,7 @@
 *.i*86
 *.x86_64
 *.hex
+*.uf2
 
 # Debug files
 *.dSYM/
@@ -56,4 +57,7 @@ dkms.conf
 
 build/
 uf2/
-picotool/
+bootloader_private_key.pem
+bootloader_public_key.pem
+private_key.pem
+otp.json
