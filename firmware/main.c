@@ -4,6 +4,7 @@
 #include "modules.h"
 #include <stdio.h>
 #include "pico/stdlib.h"
+#include "../config.h"
 
 #define LED_PIN 15
 
@@ -12,7 +13,7 @@ int main() {
     stdio_init_all();
     sleep_ms(5000);
 
-    if (wifi_connect("SSID", "PASSWORD") == 0)
+    if (wifi_connect(WIFI_SSID, WIFI_PASSWORD) == 0)
     {
         printf("Connected to WiFi");
     }
