@@ -109,3 +109,15 @@ usbipd attach --wsl --busid <busid>
 ```
 sudo picotool otp load otp.json
 ```
+
+
+# Create a config.h file in the root directory of this repo
+```
+#ifndef CONFIG_H
+#define CONFIG_H
+
+#define WIFI_SSID "your_ssid"
+#define WIFI_PASSWORD "your_password"
+
+#endif
+```

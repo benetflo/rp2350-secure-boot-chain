@@ -7,7 +7,7 @@
 #define FIRMWARE_BASE                       0x10040000                                        // Start address of firmware in flash.
 #define FIRMWARE_HEADER                     0x1003FF00                                        // Where firmware size is stored. (Before firmware)
 
-int main(void) {
+int main (void) {
        
     static uint8_t public_key[32] = 
     {
@@ -23,9 +23,9 @@ int main(void) {
 
 
     uint8_t fw_hash[32];
-    Hacl_Hash_SHA2_hash_256(fw_hash, firmware, firmware_size);
+    Hacl_Hash_SHA2_hash_256(fw_hash, firmware, firmware_size); // hash firmware to optimize Ed25519 verification
     
-    if (!Hacl_Ed25519_verify(public_key, 32, fw_hash, signature))
+    if (!Hacl_Ed25519_verify(public_key, 32, fw_hash, signature))   // verifies signature from hashed firmware (faster)
     {
         while(1);
     }
