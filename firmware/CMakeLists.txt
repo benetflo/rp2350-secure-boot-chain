@@ -6,10 +6,19 @@ project(firmware)
 
 pico_sdk_init()
 
-add_executable(firmware main.c)
+
+add_executable(firmware main.c ${CMAKE_CURRENT_SOURCE_DIR}/modules/network.c)
 
 target_include_directories(firmware PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/modules)
-target_link_libraries(firmware pico_stdlib hardware_gpio)
+
+target_link_libraries(firmware 
+    pico_stdlib 
+    hardware_gpio
+    pico_cyw43_arch_lwip_threadsafe_background
+)
+
+pico_enable_stdio_usb(firmware 1)
+pico_enable_stdio_uart(firmware 1)
 
 add_custom_command(TARGET firmware POST_BUILD
     COMMAND arm-none-eabi-objcopy -O binary firmware.elf firmware.bin
