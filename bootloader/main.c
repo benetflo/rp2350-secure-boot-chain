@@ -4,7 +4,7 @@
 #include "Hacl_Ed25519.h"
 
 #define FIRMWARE_BASE                       0x10040000                                        // Start address of firmware in flash.
-#define FIRMWARE_HEADER                     0x1003FF00
+#define FIRMWARE_HEADER                     0x1003FF00                                        // Where firmware size is stored. (Before firmware)
 
 int main(void) {
        
@@ -17,8 +17,8 @@ int main(void) {
     };
     
     uint32_t firmware_size = *(uint32_t *)FIRMWARE_HEADER;
-    uint8_t *firmware = (uint8_t *)FIRMWARE_BASE;
-    uint8_t *signature = firmware + firmware_size;
+    uint8_t * firmware = (uint8_t *)FIRMWARE_BASE;
+    uint8_t * signature = firmware + firmware_size;
 
 
     if (! Hacl_Ed25519_verify(public_key, firmware_size, firmware, signature))
@@ -43,5 +43,5 @@ int main(void) {
 
 
 
-    while(1);       // this will never be reached
+    while(1);       // this will never be reached, firmware has taken over
 }

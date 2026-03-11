@@ -8,6 +8,7 @@ pico_sdk_init()
 
 add_executable(firmware main.c)
 
+target_include_directories(firmware PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/modules)
 target_link_libraries(firmware pico_stdlib hardware_gpio)
 
 add_custom_command(TARGET firmware POST_BUILD

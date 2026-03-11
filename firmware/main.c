@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include "hardware/gpio.h"
 #include "pico/time.h"
+#include "modules.h"
 
 #define LED_PIN 15
 
