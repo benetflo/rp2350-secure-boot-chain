@@ -2,6 +2,7 @@
 #include <stddef.h>
 #include "mem.h"
 #include "Hacl_Ed25519.h"
+#include "Hacl_Hash_SHA2.h"
 
 #define FIRMWARE_BASE                       0x10040000                                        // Start address of firmware in flash.
 #define FIRMWARE_HEADER                     0x1003FF00                                        // Where firmware size is stored. (Before firmware)
@@ -21,11 +22,14 @@ int main(void) {
     uint8_t * signature = firmware + firmware_size;
 
 
-    if (! Hacl_Ed25519_verify(public_key, firmware_size, firmware, signature))
-    { 
-        // signature invalid
+    uint8_t fw_hash[32];
+    Hacl_Hash_SHA2_hash_256(fw_hash, firmware, firmware_size);
+    
+    if (!Hacl_Ed25519_verify(public_key, 32, fw_hash, signature))
+    {
         while(1);
     }
+
 
 
     // Firmware's vector table starts at FIRMWARE_BASE

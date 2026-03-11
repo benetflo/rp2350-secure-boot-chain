@@ -1,14 +1,25 @@
 import struct
 import sys
-import os
+import hashlib
+import subprocess
 
 fw = open(sys.argv[1], 'rb').read()
-sig = open(sys.argv[2], 'rb').read()
-size = struct.pack('<I', len(fw))
+sig_file = sys.argv[2]
+out_file = sys.argv[3]
+key_path = sys.argv[4] if len(sys.argv) > 4 else '../firmware_private_key.pem'
 
-outdir = os.path.dirname(sys.argv[3])
+# SHA-256 hash av firmware
+fw_hash = hashlib.sha256(fw).digest()
 
-open(sys.argv[3], 'wb').write(fw + sig)
-open(os.path.join(outdir, 'firmware_size.bin'), 'wb').write(size + b'\x00' * 4)
+# Signera hashen
+with open('/tmp/fw_hash.bin', 'wb') as f:
+    f.write(fw_hash)
 
-print(f"Signed firmware: {len(fw)} bytes + 64 bytes signature + 4 bytes size = {len(fw) + 68} bytes total")
+subprocess.run(['openssl', 'pkeyutl', '-sign', '-inkey', 
+                key_path, '-rawin', 
+                '-in', '/tmp/fw_hash.bin', '-out', sig_file])
+
+sig = open(sig_file, 'rb').read()
+open(out_file, 'wb').write(fw + sig)
+
+print(f"Signed firmware: {len(fw)} bytes, hash signed with ED25519")
