@@ -7,6 +7,37 @@
 #define FIRMWARE_BASE                       0x10040000                                        // Start address of firmware in flash.
 #define FIRMWARE_HEADER                     0x1003FF00                                        // Where firmware size is stored. (Before firmware)
 
+#define SIO_BASE         0xD0000000
+#define GPIO_OE_SET      (*(volatile uint32_t *)(SIO_BASE + 0x038))
+#define GPIO_OE_CLR      (*(volatile uint32_t *)(SIO_BASE + 0x03C))
+#define GPIO_OUT_SET     (*(volatile uint32_t *)(SIO_BASE + 0x018))
+#define GPIO_OUT_CLR     (*(volatile uint32_t *)(SIO_BASE + 0x01C))
+
+#define IO_BANK0_BASE    0x40028000
+#define PADS_BANK0_BASE  0x40038000
+
+#define GREEN_LED 16
+#define RED_LED 17
+
+static void gpio_init_output(uint32_t pin)
+{
+    GPIO_OE_CLR  = (1u << pin);
+    GPIO_OUT_CLR = (1u << pin);
+    // IOMUX - FUNCSEL = 5 (SIO)
+    *(volatile uint32_t *)(IO_BANK0_BASE + 0x04 + pin * 0x08) = 5;
+    // Pad isolation = 0
+    *(volatile uint32_t *)(PADS_BANK0_BASE + 0x04 + pin * 0x04) &= ~(1u << 8);
+    GPIO_OE_SET  = (1u << pin);
+}
+
+static void gpio_high(uint32_t pin) { GPIO_OUT_SET = (1u << pin); }
+static void gpio_low(uint32_t pin)  { GPIO_OUT_CLR = (1u << pin); }
+
+static void delay(uint32_t count)
+{
+    while(count--) __asm__ volatile("nop");
+}
+
 int main (void) {
        
     static uint8_t public_key[32] = 
@@ -21,16 +52,21 @@ int main (void) {
     uint8_t * firmware = (uint8_t *)FIRMWARE_BASE;
     uint8_t * signature = firmware + firmware_size;
 
-
     uint8_t fw_hash[32];
     Hacl_Hash_SHA2_hash_256(fw_hash, firmware, firmware_size); // hash firmware to optimize Ed25519 verification
     
     if (!Hacl_Ed25519_verify(public_key, 32, fw_hash, signature))   // verifies signature from hashed firmware (faster)
     {
+        // Light up RED LED to indicate that firmware was NOT accepted
+        gpio_init_output(RED_LED);
+        gpio_high(RED_LED);
         while(1);
     }
 
-
+    // Light up GREEN LED to indicate that firmware was accepted
+    gpio_init_output(GREEN_LED);
+    gpio_high(GREEN_LED);
+    delay(5000000);
 
     // Firmware's vector table starts at FIRMWARE_BASE
     // First 4 bytes = stack pointer value (an address in RAM e.g. 0x20082000)

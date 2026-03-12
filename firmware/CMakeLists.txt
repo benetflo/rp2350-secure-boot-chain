@@ -25,6 +25,7 @@ add_custom_command(TARGET firmware POST_BUILD
     COMMAND python3 ${CMAKE_SOURCE_DIR}/tools/sign_firmware.py firmware.bin firmware.sig firmware_signed.bin ${CMAKE_SOURCE_DIR}/firmware_private_key.pem
     COMMAND python3 ${CMAKE_SOURCE_DIR}/tools/extract_firmware_size.py firmware.bin firmware_size.bin
     COMMAND python3 ${CMAKE_SOURCE_DIR}/tools/uf2conv.py firmware_signed.bin -o fw.uf2 --family RP2350_ARM_S --base 0x10040000
+    COMMAND python3 ${CMAKE_SOURCE_DIR}/tools/uf2conv.py firmware.bin -o unsigned_firmware.uf2 --family RP2350_ARM_S --base 0x10040000
     COMMAND python3 ${CMAKE_SOURCE_DIR}/tools/uf2conv.py firmware_size.bin -b 0x1003FF00 -o size.uf2 -f RP2350_ARM_S -c
     COMMAND python3 ${CMAKE_SOURCE_DIR}/tools/merge_uf2.py fw.uf2 size.uf2 firmware.uf2
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
