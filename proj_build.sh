@@ -14,11 +14,11 @@ make clean
 make
 
 # Sign bootloader
-picotool seal --sign bootloader.elf signed_bootloader.elf ../bootloader_private_key.pem ../otp.json
-arm-none-eabi-objcopy -O binary signed_bootloader.elf signed_bootloader.bin
-python3 ../tools/uf2conv.py signed_bootloader.bin -o signed_bootloader.uf2 --family RP2350_ARM_S --base 0x10000000
+picotool seal --sign build/bootloader.elf build/signed_bootloader.elf ../bootloader_private_key.pem ../otp.json
+arm-none-eabi-objcopy -O binary build/signed_bootloader.elf build/signed_bootloader.bin
+python3 ../tools/uf2conv.py build/signed_bootloader.bin -o build/signed_bootloader.uf2 --family RP2350_ARM_S --base 0x10000000
 
-cp signed_bootloader.uf2 ../uf2
+cp build/signed_bootloader.uf2 ../uf2
 cd ..
 
 echo "===================================================" 
@@ -27,8 +27,8 @@ echo "============== Building Firmware... ==============="
 echo "===================================================" 
 echo "===================================================" 
 
-PICO_SDK_PATH=/home/benji/pico-sdk cmake -B build
-cmake --build build
+PICO_SDK_PATH=$(grep '#define PICO_SDK_PATH' config.h | sed -E 's/#define PICO_SDK_PATH "(.*)"/\1/') cmake -B build
+cmake --build build -- -j$(nproc)
 
 cp build/firmware/firmware.uf2 uf2/
 

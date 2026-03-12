@@ -3,8 +3,9 @@ OBJCOPY = arm-none-eabi-objcopy
 
 HACL_DIR = ../libs/hacl-star/dist/portable-gcc-compatible
 
+MAKEFLAGS += -j$(nproc)
 CFLAGS  = -mcpu=cortex-m33 -mthumb -mfloat-abi=soft \
-          -Os -g \
+          -Os \
           -ffreestanding -nostdlib \
           -ffunction-sections -fdata-sections \
 		  -I$(HACL_DIR) \
@@ -14,34 +15,45 @@ CFLAGS  = -mcpu=cortex-m33 -mthumb -mfloat-abi=soft \
 LDFLAGS = -T bootloader.ld -nostdlib -Wl,--gc-sections
 
 TARGET  = bootloader
-OBJS    = crt0.o embedded_start_block.o embedded_end_block.o main.o mem.o
-LIB_OBJS = Hacl_Ed25519.o Hacl_Hash_SHA2.o \
-           Hacl_Curve25519_51.o Hacl_EC_Ed25519.o
+BUILD_DIR = build
+OBJS    = $(BUILD_DIR)/crt0.o $(BUILD_DIR)/embedded_start_block.o $(BUILD_DIR)/embedded_end_block.o $(BUILD_DIR)/main.o $(BUILD_DIR)/mem.o
+LIB_OBJS = $(BUILD_DIR)/Hacl_Ed25519.o $(BUILD_DIR)/Hacl_Hash_SHA2.o \
+           $(BUILD_DIR)/Hacl_Curve25519_51.o $(BUILD_DIR)/Hacl_EC_Ed25519.o
 
-all: $(TARGET).elf $(TARGET).uf2
+all: $(BUILD_DIR)/$(TARGET).elf $(BUILD_DIR)/$(TARGET).uf2
 
-$(TARGET).elf: $(OBJS) $(LIB_OBJS)
+$(BUILD_DIR)/$(TARGET).elf: $(OBJS) $(LIB_OBJS)
+	@mkdir -p $(BUILD_DIR)
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^
 
-%.o: $(HACL_DIR)/%.c
+$(BUILD_DIR)/%.o: $(HACL_DIR)/%.c
+	@mkdir -p $(BUILD_DIR)
 	$(CC) $(CFLAGS) -c -o $@ $<
 
-crt0.o: crt0.S
+$(BUILD_DIR)/crt0.o: crt0.S
+	@mkdir -p $(BUILD_DIR)
 	$(CC) $(CFLAGS) -c -o $@ $<
 
-embedded_start_block.o: embedded_start_block.S
+$(BUILD_DIR)/embedded_start_block.o: embedded_start_block.S
+	@mkdir -p $(BUILD_DIR)
 	$(CC) $(CFLAGS) -c -o $@ $<
 
-embedded_end_block.o: embedded_end_block.S
+$(BUILD_DIR)/embedded_end_block.o: embedded_end_block.S
+	@mkdir -p $(BUILD_DIR)
 	$(CC) $(CFLAGS) -c -o $@ $<
 
-main.o: main.c
+$(BUILD_DIR)/main.o: main.c
+	@mkdir -p $(BUILD_DIR)
 	$(CC) $(CFLAGS) -c -o $@ $<
 
-$(TARGET).uf2: $(TARGET).elf
-	picotool seal $< sealed_$(TARGET).elf
-	$(OBJCOPY) -O binary sealed_$(TARGET).elf sealed_$(TARGET).bin
-	python3 ../tools/uf2conv.py sealed_$(TARGET).bin -o $@ --family RP2350_ARM_S --base 0x10000000
+$(BUILD_DIR)/mem.o: mem.c
+	@mkdir -p $(BUILD_DIR)
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+$(BUILD_DIR)/$(TARGET).uf2: $(BUILD_DIR)/$(TARGET).elf
+	picotool seal $< $(BUILD_DIR)/sealed_$(TARGET).elf
+	$(OBJCOPY) -O binary $(BUILD_DIR)/sealed_$(TARGET).elf $(BUILD_DIR)/sealed_$(TARGET).bin
+	python3 ../tools/uf2conv.py $(BUILD_DIR)/sealed_$(TARGET).bin -o $@ --family RP2350_ARM_S --base 0x10000000
 
 clean:
-	rm -f *.o *.elf *.uf2 *.bin
+	rm -rf $(BUILD_DIR)
