@@ -15,6 +15,7 @@ target_link_libraries(firmware
     pico_stdlib 
     hardware_gpio
     pico_cyw43_arch_lwip_threadsafe_background
+    pico_lwip_http
 )
 
 pico_enable_stdio_usb(firmware 1)
