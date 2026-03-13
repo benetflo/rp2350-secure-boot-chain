@@ -119,6 +119,16 @@ sudo picotool otp load otp.json
 #define WIFI_SSID "your_ssid"
 #define WIFI_PASSWORD "your_password"
 #define PICO_SDK_PATH "path/to/pico-sdk"
+#define HTTP_SERVER_HOST "ip_address"
+#define HTTP_SERVER_PORT 4567
 
 #endif
+```
+
+# Setup and run HTTP server
+```
+cd http_server
+sudo apt install ruby ruby-bundler
+bundle install
+ruby main.rb
 ```
