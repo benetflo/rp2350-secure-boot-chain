@@ -16,12 +16,14 @@ int main() {
     if (wifi_connect(WIFI_SSID, WIFI_PASSWORD) == 0)
     {
         printf("Connected to WiFi");
+        http_connect("fw-download-alias1.raspberrypi.com", "/net_install/boot.sig");
     }
 
     gpio_init(LED_PIN);
     gpio_set_dir(LED_PIN, GPIO_OUT);
 
-    while (1) {
+    while (1) 
+    {
         gpio_put(LED_PIN, 1); sleep_ms(500);
         gpio_put(LED_PIN, 0); sleep_ms(500);
     }
