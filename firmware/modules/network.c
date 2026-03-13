@@ -1,6 +1,7 @@
 #include <stdint.h>
 
 #include "modules.h"
+#include "../../config.h"
 #include "pico/stdlib.h"
 #include "pico/cyw43_arch.h"
 #include "lwip/apps/http_client.h"
@@ -130,15 +131,21 @@ static void internal_result_fn(void * arg, httpc_result_t httpc_result, u32_t rx
 
 static int http_client_request_async(async_context_t * context, HTTP_REQUEST_T * req) 
 {
-
-		const uint16_t default_port = 80;
+		#define DEFAULT_PORT 4567
+		uint16_t port = DEFAULT_PORT;
+		
+		if (HTTP_SERVER_PORT >= 1024 && HTTP_SERVER_PORT <= 49151)
+		{
+			port = HTTP_SERVER_PORT;
+		}
 
 		req->complete = false;
 		req->settings.headers_done_fn = req->headers_fn ? internal_header_fn : NULL;
 		req->settings.result_fn = internal_result_fn;
 		async_context_acquire_lock_blocking(context);
 		
-		err_t ret = httpc_get_file_dns(req->hostname, req->port ? req->port : default_port, req->url, &req->settings, internal_recv_fn, req, NULL);
+		err_t ret = httpc_get_file_dns(req->hostname, req->port ? req->port : port, req->url, &req->settings, internal_recv_fn, req, NULL);
+		printf("httpc_get_file_dns ret: %d\n", ret);
 		async_context_release_lock(context);
 		
 		if (ret != ERR_OK) 
