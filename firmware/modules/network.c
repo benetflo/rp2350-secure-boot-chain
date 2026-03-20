@@ -102,8 +102,18 @@ static err_t http_client_receive_print_fn(__unused void * arg, __unused struct a
 	return ERR_OK;
 }
 
+static int ota_skip = 0;
+
 static err_t internal_header_fn(httpc_state_t * connection, void * arg, struct pbuf * hdr, u16_t hdr_len, u32_t content_len) 
 {
+    char buf[16] = {0};
+    pbuf_copy_partial(hdr, buf, 15, 0);
+    if (strstr(buf, "304"))
+    {
+        ota_skip = 1;
+    }
+    
+    
     assert(arg);
     HTTP_REQUEST_T *req = (HTTP_REQUEST_T*)arg;
     
@@ -122,13 +132,12 @@ static err_t internal_header_fn(httpc_state_t * connection, void * arg, struct p
 #define FIRMWARE_B_FLASH_OFFSET  0x001C0000  // 0x101C0000 - 0x10000000
 #define FIRMWARE_B_HEADER_OFFSET 0x001BFF00  // 0x101BFF00 - 0x10000000
 #define METADATA_FLASH_OFFSET    0x003C0000  // 0x103C0000 - 0x10000000
+#define METADATA_ADDR    0x103C0000
 
 static uint32_t flash_write_offset = 0;
 static uint8_t  flash_page_buf[FLASH_PAGE_SIZE];
 static uint32_t flash_page_buf_len = 0;
 static uint32_t total_bytes_recv = 0;
-
-#define METADATA_ADDR    0x103C0000
 
 typedef struct {
     uint32_t active_partition;
@@ -138,7 +147,7 @@ typedef struct {
 static uint32_t get_inactive_flash_offset(void)
 {
     OTA_METADATA_T * meta = (OTA_METADATA_T *)METADATA_ADDR;
-    printf("meta magic=0x%08x active=%u\n", meta->magic, meta->active_partition);
+
     if (meta->magic == 0xDEADBEEF && meta->active_partition == 1)
     {
         return 0x00040000; // A offset
@@ -159,6 +168,7 @@ static uint32_t get_inactive_header_offset(void)
 static uint32_t get_inactive_partition_id(void)
 {
     OTA_METADATA_T * meta = (OTA_METADATA_T *)METADATA_ADDR;
+    
     if (meta->magic == 0xDEADBEEF && meta->active_partition == 1)
     {
         return 0; // aktivera A
@@ -168,6 +178,11 @@ static uint32_t get_inactive_partition_id(void)
 
 static void flash_write_chunk(const uint8_t *data, size_t len)
 {
+    if (ota_skip)
+    {
+        return;
+    }
+    
     total_bytes_recv += len;
     printf("recv chunk len=%u total=%u\n", len, total_bytes_recv);
 	size_t i = 0;
@@ -233,6 +248,12 @@ static void internal_result_fn(void * arg, httpc_result_t httpc_result, u32_t rx
     HTTP_REQUEST_T *req = (HTTP_REQUEST_T*)arg;
     HTTP_DEBUG("result %d len %u server_response %u err %d\n", httpc_result, rx_content_len, srv_res, err);
     req->complete = true;
+
+    if (ota_skip)
+    {
+        //Firmware is up to date, no update needed
+        return;
+    }
 
     // Flush remaining bytes i page buffer
     if (flash_page_buf_len > 0)
@@ -329,6 +350,8 @@ int http_connect (char * host, char * url_request)
     flash_write_offset = 0;
     flash_page_buf_len = 0;
     total_bytes_recv = 0;
+    ota_skip = 0;
+
     HTTP_REQUEST_T req = {0};
 	req.hostname = host;
 	req.url = url_request;

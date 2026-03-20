@@ -13,10 +13,16 @@ int main() {
     stdio_init_all();
     sleep_ms(5000);
 
+    printf("Running partition " PARTITION_ID "\n");
+
+    // create url for request
+    char url[64];
+    snprintf(url, sizeof(url), "/firmware?partition=%s&version=%d", PARTITION_ID, FIRMWARE_VERSION);
+
     if (wifi_connect(WIFI_SSID, WIFI_PASSWORD) == 0)
     {
         printf("Connected to WiFi");
-        http_connect(HTTP_SERVER_HOST, "/firmware?partition=" PARTITION_ID);
+        http_connect(HTTP_SERVER_HOST, url);
     }
 
     gpio_init(LED_PIN);

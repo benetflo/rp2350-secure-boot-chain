@@ -116,6 +116,8 @@ sudo picotool otp load otp.json
 #ifndef CONFIG_H
 #define CONFIG_H
 
+#define FIRMWARE_VERSION 1
+
 #define WIFI_SSID "your_ssid"
 #define WIFI_PASSWORD "your_password"
 #define PICO_SDK_PATH "path/to/pico-sdk"
