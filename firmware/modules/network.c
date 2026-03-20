@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include <stddef.h>
 
 #include "modules.h"
 #include "../../config.h"
@@ -32,6 +33,9 @@
 #define HTTP_ERROR printf
 #endif
 
+#define FIRMWARE_BASE                       0x10040000
+#define FIRMWARE_HEADER                     0x1003FF00
+
 typedef struct
 {
 	const char * hostname;
@@ -45,6 +49,8 @@ typedef struct
 	int complete;
 	httpc_result_t result;
 } HTTP_REQUEST_T;
+
+
 
 int wifi_connect (char * ssid, char * password) 
 {
@@ -96,23 +102,128 @@ static err_t http_client_receive_print_fn(__unused void * arg, __unused struct a
 	return ERR_OK;
 }
 
-static err_t internal_header_fn(httpc_state_t * connection, void * arg, struct pbuf * hdr, u16_t hdr_len, u32_t content_len) {
+static err_t internal_header_fn(httpc_state_t * connection, void * arg, struct pbuf * hdr, u16_t hdr_len, u32_t content_len) 
+{
     assert(arg);
     HTTP_REQUEST_T *req = (HTTP_REQUEST_T*)arg;
-    if (req->headers_fn) {
+    
+	if (req->headers_fn) 
+	{
         return req->headers_fn(connection, req->callback_arg, hdr, hdr_len, content_len);
     }
     return ERR_OK;
+}
+
+#include "hardware/flash.h"
+#include "hardware/sync.h"
+#include "pico/multicore.h"
+#include "hardware/watchdog.h"
+
+#define FIRMWARE_B_FLASH_OFFSET  0x001C0000  // 0x101C0000 - 0x10000000
+#define FIRMWARE_B_HEADER_OFFSET 0x001BFF00  // 0x101BFF00 - 0x10000000
+#define METADATA_FLASH_OFFSET    0x003C0000  // 0x103C0000 - 0x10000000
+
+static uint32_t flash_write_offset = 0;
+static uint8_t  flash_page_buf[FLASH_PAGE_SIZE];
+static uint32_t flash_page_buf_len = 0;
+static uint32_t total_bytes_recv = 0;
+
+#define METADATA_ADDR    0x103C0000
+
+typedef struct {
+    uint32_t active_partition;
+    uint32_t magic;
+} OTA_METADATA_T;
+
+static uint32_t get_inactive_flash_offset(void)
+{
+    OTA_METADATA_T * meta = (OTA_METADATA_T *)METADATA_ADDR;
+    printf("meta magic=0x%08x active=%u\n", meta->magic, meta->active_partition);
+    if (meta->magic == 0xDEADBEEF && meta->active_partition == 1)
+    {
+        return 0x00040000; // A offset
+    }
+    return 0x001C0000; // B offset
+}
+
+static uint32_t get_inactive_header_offset(void)
+{
+    OTA_METADATA_T * meta = (OTA_METADATA_T *)METADATA_ADDR;
+    if (meta->magic == 0xDEADBEEF && meta->active_partition == 1)
+    {
+        return 0x0003FF00; // A header offset
+    }
+    return 0x001BFF00; // B header offset
+}
+
+static uint32_t get_inactive_partition_id(void)
+{
+    OTA_METADATA_T * meta = (OTA_METADATA_T *)METADATA_ADDR;
+    if (meta->magic == 0xDEADBEEF && meta->active_partition == 1)
+    {
+        return 0; // aktivera A
+    }
+    return 1; // aktivera B
+}
+
+static void flash_write_chunk(const uint8_t *data, size_t len)
+{
+    total_bytes_recv += len;
+    printf("recv chunk len=%u total=%u\n", len, total_bytes_recv);
+	size_t i = 0;
+    while (i < len)
+    {
+        flash_page_buf[flash_page_buf_len++] = data[i++];
+
+        if (flash_page_buf_len == FLASH_PAGE_SIZE)
+        {
+            // Radera sektor om vi är i början av en ny sektor
+            if (flash_write_offset % FLASH_SECTOR_SIZE == 0)
+            {
+                uint32_t ints = save_and_disable_interrupts();
+                flash_range_erase(get_inactive_flash_offset() + flash_write_offset, FLASH_SECTOR_SIZE);
+                restore_interrupts(ints);
+            }
+
+            uint32_t ints = save_and_disable_interrupts();
+            flash_range_program(get_inactive_flash_offset() + flash_write_offset, flash_page_buf, FLASH_PAGE_SIZE);
+            restore_interrupts(ints);
+
+            flash_write_offset += FLASH_PAGE_SIZE;
+            flash_page_buf_len = 0;
+        }
+    }
+}
+
+static int handle_payload (struct pbuf * p)
+{
+	struct pbuf * temp = p; // store in new variable to avoid losing data if LWIP re-uses payload.
+
+	while (temp != NULL)
+	{
+		uint8_t * data = (uint8_t *)temp->payload;
+		size_t length = temp->len;
+
+		flash_write_chunk(data, length);
+		temp = temp->next;
+	}
+	
+	return 0;
 }
 
 static err_t internal_recv_fn(void * arg, struct altcp_pcb * conn, struct pbuf * p, err_t err) 
 {
     assert(arg);
     HTTP_REQUEST_T *req = (HTTP_REQUEST_T*)arg;
-    if (req->recv_fn) 
-	{
-        return req->recv_fn(req->callback_arg, conn, p, err);
+    
+    if (!p)
+    {
+        return ERR_OK;
     }
+
+    handle_payload(p);
+    altcp_recved(conn, p->tot_len);  // bekräfta mottagen data
+    pbuf_free(p);
     return ERR_OK;
 }
 
@@ -122,11 +233,49 @@ static void internal_result_fn(void * arg, httpc_result_t httpc_result, u32_t rx
     HTTP_REQUEST_T *req = (HTTP_REQUEST_T*)arg;
     HTTP_DEBUG("result %d len %u server_response %u err %d\n", httpc_result, rx_content_len, srv_res, err);
     req->complete = true;
-    req->result = httpc_result;
-    if (req->result_fn) 
-	{
-        req->result_fn(req->callback_arg, httpc_result, rx_content_len, srv_res, err);
+
+    // Flush remaining bytes i page buffer
+    if (flash_page_buf_len > 0)
+    {
+        memset(flash_page_buf + flash_page_buf_len, 0xFF, FLASH_PAGE_SIZE - flash_page_buf_len);
+        
+        if (flash_write_offset % FLASH_SECTOR_SIZE == 0)
+        {
+            uint32_t ints = save_and_disable_interrupts();
+            flash_range_erase(get_inactive_flash_offset() + flash_write_offset, FLASH_SECTOR_SIZE);
+            restore_interrupts(ints);
+        }
+        uint32_t ints = save_and_disable_interrupts();
+        flash_range_program(get_inactive_flash_offset() + flash_write_offset, flash_page_buf, FLASH_PAGE_SIZE);
+        restore_interrupts(ints);
+        flash_write_offset += FLASH_PAGE_SIZE;
+        flash_page_buf_len = 0;
     }
+
+    // Skriv firmware size till header
+    uint32_t fw_size = total_bytes_recv - 64;
+    uint8_t size_buf[FLASH_PAGE_SIZE];
+    memset(size_buf, 0xFF, FLASH_PAGE_SIZE);
+    memcpy(size_buf, &fw_size, 4);
+    uint32_t ints = save_and_disable_interrupts();
+    flash_range_erase(get_inactive_header_offset(), FLASH_SECTOR_SIZE);
+    flash_range_program(get_inactive_header_offset(), size_buf, FLASH_PAGE_SIZE);
+    restore_interrupts(ints);
+
+    // Skriv metadata - aktivera partition B
+    uint8_t meta_buf[FLASH_PAGE_SIZE];
+    memset(meta_buf, 0xFF, FLASH_PAGE_SIZE);
+    uint32_t active = get_inactive_partition_id();
+    uint32_t magic  = 0xDEADBEEF;
+    memcpy(meta_buf,     &active, 4);
+    memcpy(meta_buf + 4, &magic,  4);
+    ints = save_and_disable_interrupts();
+    flash_range_erase(METADATA_FLASH_OFFSET, FLASH_SECTOR_SIZE);
+    flash_range_program(METADATA_FLASH_OFFSET, meta_buf, FLASH_PAGE_SIZE);
+    restore_interrupts(ints);
+
+    printf("OTA complete! Rebooting...\n");
+    watchdog_reboot(0, 0, 0);
 }
 
 static int http_client_request_async(async_context_t * context, HTTP_REQUEST_T * req) 
@@ -177,13 +326,15 @@ static int http_client_request_sync(async_context_t * context, HTTP_REQUEST_T * 
 
 int http_connect (char * host, char * url_request)
 {
-	HTTP_REQUEST_T req = {0};
+    flash_write_offset = 0;
+    flash_page_buf_len = 0;
+    total_bytes_recv = 0;
+    HTTP_REQUEST_T req = {0};
 	req.hostname = host;
 	req.url = url_request;
 	req.headers_fn = http_client_header_print_fn;
 	req.recv_fn = http_client_receive_print_fn;
 	int result = http_client_request_sync(cyw43_arch_async_context(), &req);
-	result += http_client_request_sync(cyw43_arch_async_context(), &req); // repeat
 
-	return 0;
+	return result;
 }

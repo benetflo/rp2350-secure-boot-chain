@@ -17,6 +17,19 @@ end
 set :bind, '0.0.0.0'
 set :port, port
 
-get '/' do
-    'Hello World!\n'
+get '/firmware' do
+
+    fw_files = Dir.glob("firmware/*.uf2")
+    if fw_files.empty?
+        puts "Firmware directory is empty!"
+    end
+
+    partition = params['partition'].to_i
+
+    if partition == 0
+        send_file 'firmware/firmware_b_signed.bin'
+    else
+        send_file 'firmware/firmware_a_signed.bin'
+    end
+
 end

@@ -16,7 +16,7 @@ int main() {
     if (wifi_connect(WIFI_SSID, WIFI_PASSWORD) == 0)
     {
         printf("Connected to WiFi");
-        http_connect(HTTP_SERVER_HOST, "/");
+        http_connect(HTTP_SERVER_HOST, "/firmware?partition=" PARTITION_ID);
     }
 
     gpio_init(LED_PIN);

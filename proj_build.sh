@@ -3,6 +3,7 @@ set -e
 rm -rf build
 rm -rf otp.json
 mkdir -p uf2
+rm uf2/*
 
 echo "===================================================" 
 echo "===================================================" 
@@ -31,6 +32,7 @@ echo "==================================================="
 PICO_SDK_PATH=$(grep '#define PICO_SDK_PATH' config.h | sed -E 's/#define PICO_SDK_PATH "(.*)"/\1/') cmake -B build
 cmake --build build -- -j$(nproc)
 
-cp build/firmware/firmware.uf2 uf2/signed_firmware.uf2
-cp build/firmware/unsigned_firmware.uf2 uf2/
-
+cp build/firmware/firmware_a.uf2 uf2/signed_firmware_a.uf2
+cp build/firmware/firmware_b.uf2 uf2/signed_firmware_b.uf2
+cp build/firmware/unsigned_firmware_a.uf2 uf2/
+cp build/firmware/unsigned_firmware_b.uf2 uf2/
