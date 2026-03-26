@@ -16,7 +16,7 @@ LDFLAGS = -T bootloader.ld -nostdlib -Wl,--gc-sections
 
 TARGET  = bootloader
 BUILD_DIR = build
-OBJS    = $(BUILD_DIR)/crt0.o $(BUILD_DIR)/embedded_start_block.o $(BUILD_DIR)/embedded_end_block.o $(BUILD_DIR)/main.o $(BUILD_DIR)/mem.o
+OBJS    = $(BUILD_DIR)/crt0.o $(BUILD_DIR)/embedded_start_block.o $(BUILD_DIR)/embedded_end_block.o $(BUILD_DIR)/main.o $(BUILD_DIR)/mem.o $(BUILD_DIR)/boot_utils.o
 LIB_OBJS = $(BUILD_DIR)/Hacl_Ed25519.o $(BUILD_DIR)/Hacl_Hash_SHA2.o \
            $(BUILD_DIR)/Hacl_Curve25519_51.o $(BUILD_DIR)/Hacl_EC_Ed25519.o
 
@@ -47,6 +47,10 @@ $(BUILD_DIR)/main.o: main.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 $(BUILD_DIR)/mem.o: mem.c
+	@mkdir -p $(BUILD_DIR)
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+$(BUILD_DIR)/boot_utils.o: boot_utils.c
 	@mkdir -p $(BUILD_DIR)
 	$(CC) $(CFLAGS) -c -o $@ $<
 

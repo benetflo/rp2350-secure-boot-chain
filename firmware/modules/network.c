@@ -33,9 +33,6 @@
 #define HTTP_ERROR printf
 #endif
 
-#define FIRMWARE_BASE                       0x10040000
-#define FIRMWARE_HEADER                     0x1003FF00
-
 typedef struct
 {
 	const char * hostname;
@@ -49,8 +46,6 @@ typedef struct
 	int complete;
 	httpc_result_t result;
 } HTTP_REQUEST_T;
-
-
 
 int wifi_connect (char * ssid, char * password) 
 {
@@ -129,10 +124,15 @@ static err_t internal_header_fn(httpc_state_t * connection, void * arg, struct p
 #include "pico/multicore.h"
 #include "hardware/watchdog.h"
 
-#define FIRMWARE_B_FLASH_OFFSET  0x001C0000  // 0x101C0000 - 0x10000000
-#define FIRMWARE_B_HEADER_OFFSET 0x001BFF00  // 0x101BFF00 - 0x10000000
-#define METADATA_FLASH_OFFSET    0x003C0000  // 0x103C0000 - 0x10000000
-#define METADATA_ADDR    0x103C0000
+#define FIRMWARE_A_FLASH_OFFSET      0x00040000
+#define FIRMWARE_A_HEADER_OFFSET     0x001BFF00   // matchar 0x101BFF00
+#define FIRMWARE_B_FLASH_OFFSET      0x001C0000
+#define FIRMWARE_B_HEADER_OFFSET     0x0033FF00   // matchar 0x1033FF00
+
+#define METADATA_FLASH_OFFSET    0x00350000  // 0x10350000 - 0x10000000
+#define METADATA_ADDR            (XIP_BASE + METADATA_FLASH_OFFSET)
+
+#define SLOT_SIZE 0x180000  // 1.5MB
 
 static uint32_t flash_write_offset = 0;
 static uint8_t  flash_page_buf[FLASH_PAGE_SIZE];
@@ -150,9 +150,9 @@ static uint32_t get_inactive_flash_offset(void)
 
     if (meta->magic == 0xDEADBEEF && meta->active_partition == 1)
     {
-        return 0x00040000; // A offset
+        return FIRMWARE_A_FLASH_OFFSET; // A offset
     }
-    return 0x001C0000; // B offset
+    return FIRMWARE_B_FLASH_OFFSET; // B offset
 }
 
 static uint32_t get_inactive_header_offset(void)
@@ -160,9 +160,9 @@ static uint32_t get_inactive_header_offset(void)
     OTA_METADATA_T * meta = (OTA_METADATA_T *)METADATA_ADDR;
     if (meta->magic == 0xDEADBEEF && meta->active_partition == 1)
     {
-        return 0x0003FF00; // A header offset
+        return FIRMWARE_A_HEADER_OFFSET; // A header offset
     }
-    return 0x001BFF00; // B header offset
+    return FIRMWARE_B_HEADER_OFFSET; // B header offset
 }
 
 static uint32_t get_inactive_partition_id(void)
@@ -279,9 +279,9 @@ static void internal_result_fn(void * arg, httpc_result_t httpc_result, u32_t rx
     memset(size_buf, 0xFF, FLASH_PAGE_SIZE);
     memcpy(size_buf, &fw_size, 4);
     uint32_t ints = save_and_disable_interrupts();
-    flash_range_erase(get_inactive_header_offset(), FLASH_SECTOR_SIZE);
     flash_range_program(get_inactive_header_offset(), size_buf, FLASH_PAGE_SIZE);
     restore_interrupts(ints);
+
 
     // Skriv metadata - aktivera partition B
     uint8_t meta_buf[FLASH_PAGE_SIZE];
@@ -301,7 +301,8 @@ static void internal_result_fn(void * arg, httpc_result_t httpc_result, u32_t rx
 
 static int http_client_request_async(async_context_t * context, HTTP_REQUEST_T * req) 
 {
-		#define DEFAULT_PORT 4567
+	
+        #define DEFAULT_PORT 4567
 		uint16_t port = DEFAULT_PORT;
 		
 		if (HTTP_SERVER_PORT >= 1024 && HTTP_SERVER_PORT <= 49151)
@@ -347,6 +348,10 @@ static int http_client_request_sync(async_context_t * context, HTTP_REQUEST_T * 
 
 int http_connect (char * host, char * url_request)
 {
+    uint32_t ints = save_and_disable_interrupts();
+    flash_range_erase(get_inactive_flash_offset(), SLOT_SIZE);
+    restore_interrupts(ints);
+    
     flash_write_offset = 0;
     flash_page_buf_len = 0;
     total_bytes_recv = 0;
