@@ -33,16 +33,6 @@
 #define HTTP_ERROR printf
 #endif
 
-#define FIRMWARE_A_FLASH_OFFSET      0x00040000
-#define FIRMWARE_A_HEADER_OFFSET     0x001BFF00
-#define FIRMWARE_B_FLASH_OFFSET      0x001C0000
-#define FIRMWARE_B_HEADER_OFFSET     0x0033FF00   
-
-#define METADATA_FLASH_OFFSET    0x00350000  // 0x10350000 - 0x10000000
-#define METADATA_ADDR            (XIP_BASE + METADATA_FLASH_OFFSET)
-
-#define SLOT_SIZE 0x180000  // 1.5MB
-
 typedef struct
 {
 	const char * hostname;
@@ -61,27 +51,37 @@ static uint32_t flash_page_buf_len = 0;
 static uint32_t total_bytes_recv = 0;
 static int ota_skip = 0;
 
-typedef struct {
-    uint32_t active_partition;
-    uint32_t magic;
-} OTA_METADATA_T;
-
-int wifi_connect (char * ssid, char * password) 
+int wifi_connect(char *ssid, char *password)
 {
+    static int initialized = 0;
 
-	if (cyw43_arch_init_with_country(CYW43_COUNTRY_SWEDEN)) 
-    {
-		return 1;
-	}
+    if (!initialized) {
+        if (cyw43_arch_init_with_country(CYW43_COUNTRY_SWEDEN)) {
+            return 1;
+        }
+        cyw43_arch_enable_sta_mode();
+        initialized = 1;
+    }
 
-	cyw43_arch_enable_sta_mode();
+    for (int i = 0; i < 5; i++) {
+        printf("WiFi connect attempt %d\n", i+1);
 
-	if (cyw43_arch_wifi_connect_timeout_ms(ssid, password, CYW43_AUTH_WPA2_AES_PSK, 10000)) 
-    {
-		return 1;
-	}
-	
-    return 0;
+        if (cyw43_arch_wifi_connect_timeout_ms(
+                ssid, password,
+                CYW43_AUTH_WPA2_AES_PSK,
+                15000) == 0)
+        {
+            return 0; // success
+        }
+
+        sleep_ms(2000);
+    }
+
+    // Wifi is dead
+    printf("WiFi failed after retries, rebooting...\n");
+    sleep_ms(2000);
+    watchdog_reboot(0, 0, 0);
+    return 1; // never reached
 }
 
 // Print headers to stdout
@@ -119,36 +119,30 @@ static err_t internal_header_fn(httpc_state_t * connection, void * arg, struct p
     return ERR_OK;
 }
 
+extern int main(void);
+
+static uint32_t get_running_partition(void)
+{
+    uint32_t addr = (uint32_t)&main;
+    return (addr >= FIRMWARE_B) ? 1 : 0;
+}
+
 static uint32_t get_inactive_flash_offset(void)
 {
-    OTA_METADATA_T * meta = (OTA_METADATA_T *)METADATA_ADDR;
-
-    if (meta->magic == 0xDEADBEEF && meta->active_partition == 1)
-    {
-        return FIRMWARE_A_FLASH_OFFSET; // A offset
-    }
-    return FIRMWARE_B_FLASH_OFFSET; // B offset
+    uint32_t running = get_running_partition();
+    return (running == 1) ? FIRMWARE_A_FLASH_OFFSET : FIRMWARE_B_FLASH_OFFSET;
 }
 
 static uint32_t get_inactive_header_offset(void)
 {
-    OTA_METADATA_T * meta = (OTA_METADATA_T *)METADATA_ADDR;
-    if (meta->magic == 0xDEADBEEF && meta->active_partition == 1)
-    {
-        return FIRMWARE_A_HEADER_OFFSET; // A header offset
-    }
-    return FIRMWARE_B_HEADER_OFFSET; // B header offset
+    uint32_t running = get_running_partition();
+    return (running == 1) ? FIRMWARE_A_HEADER_OFFSET : FIRMWARE_B_HEADER_OFFSET;
 }
 
 static uint32_t get_inactive_partition_id(void)
 {
-    OTA_METADATA_T * meta = (OTA_METADATA_T *)METADATA_ADDR;
-    
-    if (meta->magic == 0xDEADBEEF && meta->active_partition == 1)
-    {
-        return 0; // activate A
-    }
-    return 1; // activate B
+    uint32_t running = get_running_partition();
+    return running ^ 1; // 0→1, 1→0
 }
 
 static void flash_write_chunk(const uint8_t *data, size_t len)

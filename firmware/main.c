@@ -6,6 +6,8 @@
 #include "pico/stdlib.h"
 #include "../config.h"
 
+#define FIRMWARE_B          0x101C0000
+
 #define LED_PIN 15
 
 int main() {
@@ -13,11 +15,16 @@ int main() {
     stdio_init_all();
     sleep_ms(5000);
 
-    printf("Running partition " PARTITION_ID "\n");
+    uint32_t my_addr = (uint32_t)&main;
+    uint32_t running_partition = (my_addr >= FIRMWARE_B) ? 1 : 0;
+
+    printf("Running partition %u\n", running_partition);
 
     // create url for request
     char url[64];
-    snprintf(url, sizeof(url), "/firmware?partition=%s&version=%d", PARTITION_ID, FIRMWARE_VERSION);
+    snprintf(url, sizeof(url), "/firmware?partition=%u&version=%d", running_partition, FIRMWARE_VERSION);
+
+    printf("Running partition %u\n", running_partition);
 
     if (wifi_connect(WIFI_SSID, WIFI_PASSWORD) == 0)
     {

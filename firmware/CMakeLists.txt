@@ -7,7 +7,10 @@ project(firmware)
 pico_sdk_init()
 
 
-add_executable(firmware_a main.c ${CMAKE_CURRENT_SOURCE_DIR}/modules/network.c)
+add_executable(firmware_a 
+        main.c 
+        ${CMAKE_CURRENT_SOURCE_DIR}/modules/network.c
+)
 
 target_include_directories(firmware_a PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/modules)
 
@@ -39,7 +42,10 @@ add_custom_command(TARGET firmware_a POST_BUILD
     COMMENT "Generating and signing firmware.uf2"
 )
 
-add_executable(firmware_b main.c ${CMAKE_CURRENT_SOURCE_DIR}/modules/network.c)
+add_executable(firmware_b 
+        main.c 
+        ${CMAKE_CURRENT_SOURCE_DIR}/modules/network.c
+)
 
 target_include_directories(firmware_b PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/modules)
 
