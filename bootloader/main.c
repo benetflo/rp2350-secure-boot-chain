@@ -14,9 +14,8 @@
 
 typedef struct
 {
-    uint32_t active_partition;
+    uint32_t active_partition; // 0 == A, 1 == B
     uint32_t magic;
-    //uint32_t boot_attempts; // for rollback protection
 } OTA_METADATA_T;
 
 static uint8_t public_key[32] = 
@@ -30,6 +29,8 @@ static uint8_t public_key[32] =
 int main (void) {
       
     gpio_init_output(YELLOW_LED);
+    gpio_init_output(RED_LED);
+
     gpio_high(YELLOW_LED);
 
     OTA_METADATA_T * meta = (OTA_METADATA_T *)METADATA_ADDR;
@@ -37,15 +38,20 @@ int main (void) {
     uint32_t firmware_base;
     uint32_t firmware_header;
 
-    if (meta->magic == 0xDEADBEEF && meta->active_partition == 1)
-    {
-        firmware_base = FIRMWARE_B;
-        firmware_header = FIRMWARE_B_HEADER;
-    }
-    else
+    if (meta->magic != 0xDEADBEEF) // first boot
     {
         firmware_base = FIRMWARE_A;
         firmware_header = FIRMWARE_A_HEADER;
+    }
+    else
+    {
+        if (meta->active_partition == 1) {
+            firmware_base   = FIRMWARE_B;
+            firmware_header = FIRMWARE_B_HEADER;
+        } else {
+            firmware_base   = FIRMWARE_A;
+            firmware_header = FIRMWARE_A_HEADER;
+        }
     }
     
     uint32_t firmware_size = *(uint32_t *)firmware_header;
@@ -57,11 +63,30 @@ int main (void) {
     
     if (!Hacl_Ed25519_verify(public_key, 32, fw_hash, signature))   // verifies signature from hashed firmware (faster)
     {
-        // Light up RED LED to indicate that firmware was NOT accepted
-        gpio_low(YELLOW_LED);
-        gpio_init_output(RED_LED);
         gpio_high(RED_LED);
-        while(1);
+
+        // signature fail → try other slot
+        if (firmware_base == FIRMWARE_A) {
+            firmware_base   = FIRMWARE_B;
+            firmware_header = FIRMWARE_B_HEADER;
+        } else {
+            firmware_base   = FIRMWARE_A;
+            firmware_header = FIRMWARE_A_HEADER;
+        }
+
+        firmware_size = *(uint32_t *)firmware_header;
+        firmware = (uint8_t *)firmware_base;
+        signature = firmware + firmware_size;
+
+        Hacl_Hash_SHA2_hash_256(fw_hash, firmware, firmware_size);
+
+        if (!Hacl_Ed25519_verify(public_key, 32, fw_hash, signature)) {
+            // båda slots ogiltiga → stanna i rött
+            gpio_low(YELLOW_LED);
+            gpio_high(RED_LED);
+            while (1);
+        }
+        gpio_low(RED_LED);
     }
 
     // Light up GREEN LED to indicate that firmware was accepted
