@@ -8,13 +8,13 @@
 #include "lwip/apps/http_client.h"
 #include "lwip/altcp.h"
 #include "lwip/altcp_tls.h"
+#include "hardware/flash.h"
+#include "hardware/sync.h"
+#include "pico/multicore.h"
+#include "hardware/watchdog.h"
 
 #ifndef HTTP_INFO
 #define HTTP_INFO printf
-#endif
-
-#ifndef HTTP_INFOC
-#define HTTP_INFOC putchar
 #endif
 
 #ifndef HTTP_INFOC
@@ -33,16 +33,21 @@
 #define HTTP_ERROR printf
 #endif
 
-#define FIRMWARE_BASE                       0x10040000
-#define FIRMWARE_HEADER                     0x1003FF00
+#define FIRMWARE_A_FLASH_OFFSET      0x00040000
+#define FIRMWARE_A_HEADER_OFFSET     0x001BFF00
+#define FIRMWARE_B_FLASH_OFFSET      0x001C0000
+#define FIRMWARE_B_HEADER_OFFSET     0x0033FF00   
+
+#define METADATA_FLASH_OFFSET    0x00350000  // 0x10350000 - 0x10000000
+#define METADATA_ADDR            (XIP_BASE + METADATA_FLASH_OFFSET)
+
+#define SLOT_SIZE 0x180000  // 1.5MB
 
 typedef struct
 {
 	const char * hostname;
 	const char * url;
-	httpc_headers_done_fn headers_fn;
-	altcp_recv_fn recv_fn;
-	httpc_result_fn result_fn;
+    httpc_headers_done_fn headers_fn;
 	void * callback_arg;
 	uint16_t port;
 	httpc_connection_t settings;
@@ -50,7 +55,16 @@ typedef struct
 	httpc_result_t result;
 } HTTP_REQUEST_T;
 
+static uint32_t flash_write_offset = 0;
+static uint8_t  flash_page_buf[FLASH_PAGE_SIZE];
+static uint32_t flash_page_buf_len = 0;
+static uint32_t total_bytes_recv = 0;
+static int ota_skip = 0;
 
+typedef struct {
+    uint32_t active_partition;
+    uint32_t magic;
+} OTA_METADATA_T;
 
 int wifi_connect (char * ssid, char * password) 
 {
@@ -86,33 +100,14 @@ static err_t http_client_header_print_fn(__unused httpc_state_t * connection, __
 	return ERR_OK;
 }
 
-// Print body to stdout
-static err_t http_client_receive_print_fn(__unused void * arg, __unused struct altcp_pcb * conn, struct pbuf * p, err_t err) 
-{
-	HTTP_INFO("\ncontent err %d\n", err);
-    
-	u16_t offset = 0;
-    
-	while (offset < p->tot_len) 
-	{
-        char c = (char)pbuf_get_at(p, offset++);
-        HTTP_INFOC(c);
-    }
-    
-	return ERR_OK;
-}
-
-static int ota_skip = 0;
-
 static err_t internal_header_fn(httpc_state_t * connection, void * arg, struct pbuf * hdr, u16_t hdr_len, u32_t content_len) 
 {
     char buf[16] = {0};
     pbuf_copy_partial(hdr, buf, 15, 0);
-    if (strstr(buf, "304"))
+    if (strstr(buf, "304")) // if firmware is the same version as firmware running
     {
         ota_skip = 1;
     }
-    
     
     assert(arg);
     HTTP_REQUEST_T *req = (HTTP_REQUEST_T*)arg;
@@ -124,35 +119,15 @@ static err_t internal_header_fn(httpc_state_t * connection, void * arg, struct p
     return ERR_OK;
 }
 
-#include "hardware/flash.h"
-#include "hardware/sync.h"
-#include "pico/multicore.h"
-#include "hardware/watchdog.h"
-
-#define FIRMWARE_B_FLASH_OFFSET  0x001C0000  // 0x101C0000 - 0x10000000
-#define FIRMWARE_B_HEADER_OFFSET 0x001BFF00  // 0x101BFF00 - 0x10000000
-#define METADATA_FLASH_OFFSET    0x003C0000  // 0x103C0000 - 0x10000000
-#define METADATA_ADDR    0x103C0000
-
-static uint32_t flash_write_offset = 0;
-static uint8_t  flash_page_buf[FLASH_PAGE_SIZE];
-static uint32_t flash_page_buf_len = 0;
-static uint32_t total_bytes_recv = 0;
-
-typedef struct {
-    uint32_t active_partition;
-    uint32_t magic;
-} OTA_METADATA_T;
-
 static uint32_t get_inactive_flash_offset(void)
 {
     OTA_METADATA_T * meta = (OTA_METADATA_T *)METADATA_ADDR;
 
     if (meta->magic == 0xDEADBEEF && meta->active_partition == 1)
     {
-        return 0x00040000; // A offset
+        return FIRMWARE_A_FLASH_OFFSET; // A offset
     }
-    return 0x001C0000; // B offset
+    return FIRMWARE_B_FLASH_OFFSET; // B offset
 }
 
 static uint32_t get_inactive_header_offset(void)
@@ -160,9 +135,9 @@ static uint32_t get_inactive_header_offset(void)
     OTA_METADATA_T * meta = (OTA_METADATA_T *)METADATA_ADDR;
     if (meta->magic == 0xDEADBEEF && meta->active_partition == 1)
     {
-        return 0x0003FF00; // A header offset
+        return FIRMWARE_A_HEADER_OFFSET; // A header offset
     }
-    return 0x001BFF00; // B header offset
+    return FIRMWARE_B_HEADER_OFFSET; // B header offset
 }
 
 static uint32_t get_inactive_partition_id(void)
@@ -171,9 +146,9 @@ static uint32_t get_inactive_partition_id(void)
     
     if (meta->magic == 0xDEADBEEF && meta->active_partition == 1)
     {
-        return 0; // aktivera A
+        return 0; // activate A
     }
-    return 1; // aktivera B
+    return 1; // activate B
 }
 
 static void flash_write_chunk(const uint8_t *data, size_t len)
@@ -279,11 +254,11 @@ static void internal_result_fn(void * arg, httpc_result_t httpc_result, u32_t rx
     memset(size_buf, 0xFF, FLASH_PAGE_SIZE);
     memcpy(size_buf, &fw_size, 4);
     uint32_t ints = save_and_disable_interrupts();
-    flash_range_erase(get_inactive_header_offset(), FLASH_SECTOR_SIZE);
     flash_range_program(get_inactive_header_offset(), size_buf, FLASH_PAGE_SIZE);
     restore_interrupts(ints);
 
-    // Skriv metadata - aktivera partition B
+
+    // Write metadata - activate partition B
     uint8_t meta_buf[FLASH_PAGE_SIZE];
     memset(meta_buf, 0xFF, FLASH_PAGE_SIZE);
     uint32_t active = get_inactive_partition_id();
@@ -299,24 +274,27 @@ static void internal_result_fn(void * arg, httpc_result_t httpc_result, u32_t rx
     watchdog_reboot(0, 0, 0);
 }
 
+// HTTP request
 static int http_client_request_async(async_context_t * context, HTTP_REQUEST_T * req) 
 {
-		#define DEFAULT_PORT 4567
-		uint16_t port = DEFAULT_PORT;
+        #define DEFAULT_PORT 4567
+
+        uint16_t port = DEFAULT_PORT;
 		
+        // If port is a common user port
 		if (HTTP_SERVER_PORT >= 1024 && HTTP_SERVER_PORT <= 49151)
 		{
 			port = HTTP_SERVER_PORT;
 		}
 
-		req->complete = false;
-		req->settings.headers_done_fn = req->headers_fn ? internal_header_fn : NULL;
-		req->settings.result_fn = internal_result_fn;
-		async_context_acquire_lock_blocking(context);
+		req->complete = false; // request is in progress
+		req->settings.headers_done_fn = req->headers_fn ? internal_header_fn : NULL; // set header callback function. Runs after header has been received but before the body. This is so that you can react to headers, 403 status code for example.
+		req->settings.result_fn = internal_result_fn; // set callback function to run after request is done
+		async_context_acquire_lock_blocking(context); // lock context so that other threads or interupts does not störa
 		
-		err_t ret = httpc_get_file_dns(req->hostname, req->port ? req->port : port, req->url, &req->settings, internal_recv_fn, req, NULL);
+		err_t ret = httpc_get_file_dns(req->hostname, req->port ? req->port : port, req->url, &req->settings, internal_recv_fn, req, NULL); // DNS-lookup, open TCP, send GET, recieve data in internal_recv_fn, call internal_result_fn when everythin is done
 		printf("httpc_get_file_dns ret: %d\n", ret);
-		async_context_release_lock(context);
+		async_context_release_lock(context); // unlock context
 		
 		if (ret != ERR_OK) 
 		{
@@ -347,17 +325,24 @@ static int http_client_request_sync(async_context_t * context, HTTP_REQUEST_T * 
 
 int http_connect (char * host, char * url_request)
 {
+    // erase full flash area of inactive partition
+    uint32_t ints = save_and_disable_interrupts();
+    flash_range_erase(get_inactive_flash_offset(), SLOT_SIZE);
+    restore_interrupts(ints);
+    
+    // reset all variables before new connections
     flash_write_offset = 0;
     flash_page_buf_len = 0;
     total_bytes_recv = 0;
     ota_skip = 0;
 
+    // connect to OTA server
     HTTP_REQUEST_T req = {0};
 	req.hostname = host;
 	req.url = url_request;
-	req.headers_fn = http_client_header_print_fn;
-	req.recv_fn = http_client_receive_print_fn;
+    req.headers_fn = http_client_header_print_fn;
 	int result = http_client_request_sync(cyw43_arch_async_context(), &req);
+
 
 	return result;
 }

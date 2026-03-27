@@ -32,7 +32,7 @@ add_custom_command(TARGET firmware_a POST_BUILD
     COMMAND python3 ${CMAKE_SOURCE_DIR}/tools/sign_firmware.py firmware_a.bin firmware_a.sig firmware_a_signed.bin ${CMAKE_SOURCE_DIR}/firmware_private_key.pem
     COMMAND python3 ${CMAKE_SOURCE_DIR}/tools/extract_firmware_size.py firmware_a.bin firmware_a_size.bin
     COMMAND python3 ${CMAKE_SOURCE_DIR}/tools/uf2conv.py firmware_a_signed.bin -o fw_a.uf2 --family RP2350_ARM_S --base 0x10040000
-    COMMAND python3 ${CMAKE_SOURCE_DIR}/tools/uf2conv.py firmware_a_size.bin -b 0x1003FF00 -o size_a.uf2 -f RP2350_ARM_S -c
+    COMMAND python3 ${CMAKE_SOURCE_DIR}/tools/uf2conv.py firmware_a_size.bin -b 0x101BFF00 -o size_a.uf2 -f RP2350_ARM_S -c
     COMMAND python3 ${CMAKE_SOURCE_DIR}/tools/merge_uf2.py fw_a.uf2 size_a.uf2 firmware_a.uf2
     COMMAND python3 ${CMAKE_SOURCE_DIR}/tools/uf2conv.py firmware_a.bin -o unsigned_firmware_a.uf2 --family RP2350_ARM_S --base 0x10040000
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
@@ -64,7 +64,7 @@ add_custom_command(TARGET firmware_b POST_BUILD
     COMMAND python3 ${CMAKE_SOURCE_DIR}/tools/sign_firmware.py firmware_b.bin firmware_b.sig firmware_b_signed.bin ${CMAKE_SOURCE_DIR}/firmware_private_key.pem
     COMMAND python3 ${CMAKE_SOURCE_DIR}/tools/extract_firmware_size.py firmware_b.bin firmware_b_size.bin
     COMMAND python3 ${CMAKE_SOURCE_DIR}/tools/uf2conv.py firmware_b_signed.bin -o fw_b.uf2 --family RP2350_ARM_S --base 0x101C0000
-    COMMAND python3 ${CMAKE_SOURCE_DIR}/tools/uf2conv.py firmware_b_size.bin -b 0x101BFF00 -o size_b.uf2 -f RP2350_ARM_S -c
+    COMMAND python3 ${CMAKE_SOURCE_DIR}/tools/uf2conv.py firmware_b_size.bin -b 0x1033FF00 -o size_b.uf2 -f RP2350_ARM_S -c
     COMMAND python3 ${CMAKE_SOURCE_DIR}/tools/merge_uf2.py fw_b.uf2 size_b.uf2 firmware_b.uf2
     COMMAND python3 ${CMAKE_SOURCE_DIR}/tools/uf2conv.py firmware_b.bin -o unsigned_firmware_b.uf2 --family RP2350_ARM_S --base 0x101C0000
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}

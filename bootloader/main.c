@@ -1,51 +1,22 @@
 #include <stdint.h>
 #include <stddef.h>
 #include "mem.h"
+#include "boot_utils.h"
 #include "Hacl_Ed25519.h"
 #include "Hacl_Hash_SHA2.h"
 
 #define FIRMWARE_A          0x10040000
-#define FIRMWARE_A_HEADER   0x1003FF00
+#define FIRMWARE_A_HEADER   0x101BFF00
 #define FIRMWARE_B          0x101C0000
-#define FIRMWARE_B_HEADER   0x101BFF00
-#define METADATA_ADDR       0x103C0000
-
-#define SIO_BASE         0xD0000000
-#define GPIO_OE_SET      (*(volatile uint32_t *)(SIO_BASE + 0x038))
-#define GPIO_OE_CLR      (*(volatile uint32_t *)(SIO_BASE + 0x040))
-#define GPIO_OUT_SET     (*(volatile uint32_t *)(SIO_BASE + 0x018))
-#define GPIO_OUT_CLR     (*(volatile uint32_t *)(SIO_BASE + 0x020))
-
-#define IO_BANK0_BASE    0x40028000
-#define PADS_BANK0_BASE  0x40038000
-
-#define GREEN_LED 16
-#define RED_LED 17
-#define YELLOW_LED 18
-
-static void gpio_init_output(uint32_t pin)
-{
-    GPIO_OE_CLR  = (1u << pin);
-    GPIO_OUT_CLR = (1u << pin);
-    // IOMUX - FUNCSEL = 5 (SIO)
-    *(volatile uint32_t *)(IO_BANK0_BASE + pin * 8 + 4) = 5;
-    // Pad isolation = 0
-    *(volatile uint32_t *)(PADS_BANK0_BASE + 0x04 + pin * 0x04) &= ~(1u << 8);
-    GPIO_OE_SET  = (1u << pin);
-}
-
-static void gpio_high(uint32_t pin) { GPIO_OUT_SET = (1u << pin); }
-static void gpio_low(uint32_t pin)  { GPIO_OUT_CLR = (1u << pin); }
-
-static void delay(uint32_t count)
-{
-    while(count--) __asm__ volatile("nop");
-}
+#define FIRMWARE_B_HEADER   0x1033FF00
+#define SLOT_SIZE           0x00180000
+#define METADATA_ADDR       0x10350000
 
 typedef struct
 {
     uint32_t active_partition;
     uint32_t magic;
+    //uint32_t boot_attempts; // for rollback protection
 } OTA_METADATA_T;
 
 static uint8_t public_key[32] = 
