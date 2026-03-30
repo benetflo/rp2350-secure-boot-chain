@@ -19,8 +19,13 @@
 typedef struct {
     uint32_t active_partition;
     uint32_t magic;
-    uint32_t boot_attempts;
 } OTA_METADATA_T;
+
+typedef struct {
+    uint32_t size;
+    uint32_t version;
+    uint8_t  signature[64];
+} fw_header_t; //max 256 bytes
 
 int wifi_connect(char * ssid, char * password);
 int http_connect(char * host, char * url_request);
