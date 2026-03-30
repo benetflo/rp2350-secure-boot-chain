@@ -46,8 +46,22 @@ get '/firmware' do
         return "Firmware directory is empty"
     end
 
+    if params['partition'] == nil or params['version'] == nil
+        status 400
+        return "Firmware argument error: One or more arguments was not defined"
+    end
+
     partition = params['partition'].to_i
+    if partition != 0 and partition != 1
+        status 400
+        return "Firmware partition argument error: Not 0(A) or 1(B)"
+    end
+
     client_version = params['version'].to_i
+    if client_version < 0
+        status 422
+        return "Firmware version argument error: Version can not be a negative number"
+    end
 
     version = load_version()
     server_version = version || settings.server_version

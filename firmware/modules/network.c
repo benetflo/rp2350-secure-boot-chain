@@ -242,15 +242,21 @@ static void internal_result_fn(void * arg, httpc_result_t httpc_result, u32_t rx
         flash_page_buf_len = 0;
     }
 
-    // Skriv firmware size till header
+    // Write firmware size and version to header
     uint32_t fw_size = total_bytes_recv - 64;
-    uint8_t size_buf[FLASH_PAGE_SIZE];
-    memset(size_buf, 0xFF, FLASH_PAGE_SIZE);
-    memcpy(size_buf, &fw_size, 4);
-    uint32_t ints = save_and_disable_interrupts();
-    flash_range_program(get_inactive_header_offset(), size_buf, FLASH_PAGE_SIZE);
-    restore_interrupts(ints);
+    uint32_t fw_version = FIRMWARE_VERSION; // get version from config.h 
 
+    fw_header_t fw_header = {0};
+    fw_header.size = fw_size;
+    fw_header.version = fw_version;
+
+    uint8_t buf[FLASH_PAGE_SIZE];
+    memset(buf, 0xFF, sizeof(buf));
+    memcpy(buf, &fw_header, sizeof(fw_header));
+    
+    uint32_t ints = save_and_disable_interrupts();
+    flash_range_program(get_inactive_header_offset(), buf, FLASH_PAGE_SIZE);
+    restore_interrupts(ints);
 
     // Write metadata - activate partition B
     uint8_t meta_buf[FLASH_PAGE_SIZE];

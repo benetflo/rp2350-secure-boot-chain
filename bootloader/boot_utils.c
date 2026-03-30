@@ -28,3 +28,32 @@ void delay(uint32_t count)
 {
     while(count--) __asm__ volatile("nop");
 }
+
+static uint32_t otp_read_min_version()
+{
+    return 0;
+}
+
+int check_firmware_version(uint8_t partition_flag)
+{
+    fw_header_t * temp_hdr;
+    
+    if (partition_flag == 0)
+    {
+        temp_hdr = (fw_header_t*)FIRMWARE_A_HEADER;
+    }
+    else
+    {
+        temp_hdr = (fw_header_t*)FIRMWARE_B_HEADER;
+    }
+
+    uint32_t fw_version = temp_hdr->version;
+    uint32_t min_version = otp_read_min_version();
+
+    if (fw_version < min_version) // ROLLBACK PROTECTION
+    {
+        return -1;
+    }
+
+    return 0; // OK
+}

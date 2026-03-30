@@ -5,19 +5,6 @@
 #include "Hacl_Ed25519.h"
 #include "Hacl_Hash_SHA2.h"
 
-#define FIRMWARE_A          0x10040000
-#define FIRMWARE_A_HEADER   0x101BFF00
-#define FIRMWARE_B          0x101C0000
-#define FIRMWARE_B_HEADER   0x1033FF00
-#define SLOT_SIZE           0x00180000
-#define METADATA_ADDR       0x10350000
-
-typedef struct
-{
-    uint32_t active_partition; // 0 == A, 1 == B
-    uint32_t magic;
-} OTA_METADATA_T;
-
 static uint8_t public_key[32] = 
 {
     0xa5, 0x7a, 0xa9, 0xd3, 0x9c, 0xb1, 0x2a, 0xd8,
@@ -25,6 +12,8 @@ static uint8_t public_key[32] =
     0xc4, 0xe3, 0xad, 0x5c, 0x0e, 0xda, 0x31, 0xb5,
     0x99, 0xb0, 0xf4, 0xad, 0x6a, 0x66, 0x94, 0x3e
 };
+
+static uint8_t partition_flag = 0; // default == A
 
 int main (void) {
       
@@ -36,51 +25,76 @@ int main (void) {
     OTA_METADATA_T * meta = (OTA_METADATA_T *)METADATA_ADDR;
 
     uint32_t firmware_base;
-    uint32_t firmware_header;
+    fw_header_t * fw_hdr;
 
     if (meta->magic != 0xDEADBEEF) // first boot
     {
+        partition_flag = 0;
         firmware_base = FIRMWARE_A;
-        firmware_header = FIRMWARE_A_HEADER;
+        fw_hdr = (fw_header_t *)FIRMWARE_A_HEADER;
     }
     else
     {
-        if (meta->active_partition == 1) {
+        if (meta->active_partition == 1) 
+        {
+            partition_flag = 1;
             firmware_base   = FIRMWARE_B;
-            firmware_header = FIRMWARE_B_HEADER;
-        } else {
+            fw_hdr = (fw_header_t *)FIRMWARE_B_HEADER;
+        } 
+        else 
+        {
+            partition_flag = 0;
             firmware_base   = FIRMWARE_A;
-            firmware_header = FIRMWARE_A_HEADER;
+            fw_hdr = (fw_header_t *)FIRMWARE_A_HEADER;
         }
     }
     
-    uint32_t firmware_size = *(uint32_t *)firmware_header;
+    if (check_firmware_version(partition_flag) != 0) // ROLLBACK PROTECTION
+    {
+        gpio_high(RED_LED);
+        while(1);
+    }
+
+    uint32_t firmware_size = fw_hdr->size;
+    uint32_t firmware_version = fw_hdr->version;
     uint8_t * firmware = (uint8_t *)firmware_base;
-    uint8_t * signature = firmware + firmware_size;
+    uint8_t * fw_sig = firmware + firmware_size;
 
     uint8_t fw_hash[32];
     Hacl_Hash_SHA2_hash_256(fw_hash, firmware, firmware_size); // hash firmware to optimize Ed25519 verification
     
-    if (!Hacl_Ed25519_verify(public_key, 32, fw_hash, signature))   // verifies signature from hashed firmware (faster)
+    if (!Hacl_Ed25519_verify(public_key, 32, fw_hash, fw_sig))   // verifies signature from hashed firmware (faster)
     {
         gpio_high(RED_LED);
 
         // signature fail → try other slot
-        if (firmware_base == FIRMWARE_A) {
+        if (firmware_base == FIRMWARE_A) 
+        {
+            partition_flag = 1;
             firmware_base   = FIRMWARE_B;
-            firmware_header = FIRMWARE_B_HEADER;
-        } else {
+            fw_hdr = (fw_header_t *)FIRMWARE_B_HEADER;
+        } 
+        else 
+        {
+            partition_flag = 0;
             firmware_base   = FIRMWARE_A;
-            firmware_header = FIRMWARE_A_HEADER;
+            fw_hdr = (fw_header_t *)FIRMWARE_A_HEADER;
         }
 
-        firmware_size = *(uint32_t *)firmware_header;
+        if (check_firmware_version(partition_flag) != 0) // ROLLBACK PROTECTION
+        {
+            gpio_high(RED_LED);
+            while(1);
+        }
+
+        firmware_size = fw_hdr->size;
+        firmware_version = fw_hdr->version;
         firmware = (uint8_t *)firmware_base;
-        signature = firmware + firmware_size;
+        fw_sig = firmware + firmware_size;
 
         Hacl_Hash_SHA2_hash_256(fw_hash, firmware, firmware_size);
 
-        if (!Hacl_Ed25519_verify(public_key, 32, fw_hash, signature)) {
+        if (!Hacl_Ed25519_verify(public_key, 32, fw_hash, fw_sig)) {
             // båda slots ogiltiga → stanna i rött
             gpio_low(YELLOW_LED);
             gpio_high(RED_LED);
