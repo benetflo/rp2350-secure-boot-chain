@@ -61,5 +61,4 @@ uf2/
 picotool/
 firmware_private_key.pem
 bootloader_private_key.pem
-otp.json
 config.h
