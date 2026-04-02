@@ -50,6 +50,7 @@ static uint8_t  flash_page_buf[FLASH_PAGE_SIZE];
 static uint32_t flash_page_buf_len = 0;
 static uint32_t total_bytes_recv = 0;
 static int ota_skip = 0;
+static int flash_erased = 0;
 
 int wifi_connect(char *ssid, char *password)
 {
@@ -200,13 +201,24 @@ static int handle_payload (struct pbuf * p)
 }
 
 static err_t internal_recv_fn(void * arg, struct altcp_pcb * conn, struct pbuf * p, err_t err) 
-{
+{   
     assert(arg);
     HTTP_REQUEST_T *req = (HTTP_REQUEST_T*)arg;
     
     if (!p)
     {
         return ERR_OK;
+    }
+
+    // erase full flash area of inactive partition if data is being sent
+    if (!flash_erased)
+    {
+        multicore_lockout_start_blocking();
+        uint32_t ints = save_and_disable_interrupts();
+        flash_range_erase(get_inactive_flash_offset(), SLOT_SIZE);
+        restore_interrupts(ints);
+        multicore_lockout_end_blocking();
+        flash_erased = 1;
     }
 
     handle_payload(p);
@@ -221,6 +233,12 @@ static void internal_result_fn(void * arg, httpc_result_t httpc_result, u32_t rx
     HTTP_REQUEST_T *req = (HTTP_REQUEST_T*)arg;
     HTTP_DEBUG("result %d len %u server_response %u err %d\n", httpc_result, rx_content_len, srv_res, err);
     req->complete = true;
+
+    if (httpc_result != HTTPC_RESULT_OK || srv_res != 200)
+    {
+        printf("OTA skipped: httpc_result=%d srv_res=%u\n", httpc_result, srv_res);
+        return;
+    }
 
     if (ota_skip)
     {
@@ -326,29 +344,32 @@ static int http_client_request_sync(async_context_t * context, HTTP_REQUEST_T * 
 	{
         return ret;
     }
+
+    uint32_t start = to_ms_since_boot(get_absolute_time());
+    
     while(!req->complete) 
 	{
         async_context_poll(context);
         async_context_wait_for_work_ms(context, 1000);
+        
+        if (to_ms_since_boot(get_absolute_time()) - start > 30000)
+        {
+            printf("OTA timeout\n");
+            return -1;
+        }
     }
     
 	return req->result;
 }
 
 int http_connect (char * host, char * url_request)
-{
-    // erase full flash area of inactive partition
-    multicore_lockout_start_blocking();
-    uint32_t ints = save_and_disable_interrupts();
-    flash_range_erase(get_inactive_flash_offset(), SLOT_SIZE);
-    restore_interrupts(ints);
-    multicore_lockout_end_blocking();
-    
+{   
     // reset all variables before new connections
     flash_write_offset = 0;
     flash_page_buf_len = 0;
     total_bytes_recv = 0;
     ota_skip = 0;
+    flash_erased = 0;
 
     // connect to OTA server
     HTTP_REQUEST_T req = {0};

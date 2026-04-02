@@ -47,8 +47,12 @@ void core_1_callback (void)
     {
         if (wifi_connect(WIFI_SSID, WIFI_PASSWORD) == 0)
         {
-            printf("Core 1: Connected to WiFi");
-            http_connect(HTTP_SERVER_HOST, url);
+            printf("Core 1: Connected to WiFi\n");
+            int result = http_connect(HTTP_SERVER_HOST, url);
+            if (result != 0)
+            {
+                printf("Core 1: OTA failed or server unreachable, result=%d\n", result);
+            }
         }
         sleep_ms(10000); // 10 seconds
     }
