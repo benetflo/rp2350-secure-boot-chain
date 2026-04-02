@@ -1,37 +1,5 @@
 # Pico2 Secure Bootchain
 
-## *Embedded System Security Architecture*
-
-### *Threat Model*
-
-#### *Assets*
-- Firmware Integrity
-- Confidential cryptographic keys
-- Device functionality and reliability
-- The OTA update mechanism
-
-The primary assets in this system are the integrity of the firmware, the cryptographic keys used for signing firmware updates, and the reliability of the device. If these assets are compromised, an attacker could execute arbitrary code or disrupt device functionality.
-
-#### *Attackers*
-#### *Attacker Capabilities*
-#### *Assumptions*
-
-### *Attack Scenarios*
-
-#### *Malicious Firmware Installation*
-#### *OTA Firmware Tampering*
-#### *Physical Firmware Replacement*
-#### *Supply Chain Attack*
-
-### *Security Design*
-
-#### *Root of Trust*
-#### *Secure Boot*
-#### *Firmware Signing*
-#### *Secure OTA updates*
-#### *Securing the Build and Update Chain*
-
-
 *Before building...*
 ## Requirements
 - arm-none-eabi-gcc
@@ -40,32 +8,54 @@ The primary assets in this system are the integrity of the firmware, the cryptog
 - python3
 - Pico SDK at `/home/benji/pico-sdk` (or set `PICO_SDK_PATH`) *FIX THIS PATH*
 
+# SETUP
+
 - Clone this repository
 ```
 git clone --recurse-submodules https://github.com/benetflo/pico2-secure-bootchain.git
 ```
 
-- Install Pico SDK
-
-
-
-- Download Picotool
+- Install Pico SDK and add to PATH
 ```
-sudo apt install cmake libusb-1.0-0-dev pkg-config git
-git clone https://github.com/raspberrypi/picotool.git
+cd ~
+git clone https://github.com/raspberrypi/pico-sdk.git
+cd pico-sdk
+git submodule update --init
+echo 'export PICO_SDK_PATH=~/pico-sdk' >> ~/.bashrc
+source ~/.bashrc
+```
+
+- Install Picotool
+```
+cd ~
+git clone --recurse-submodules https://github.com/raspberrypi/picotool.git
 cd picotool
+sudo apt update
+sudo apt install cmake libusb-1.0-0-dev pkg-config git libmbedtls-dev
 mkdir build && cd build
-cmake .. -DPICO_SDK_PATH=/home/benji/pico-sdk
-make
+cmake .. -DPICO_SDK_PATH=~/pico-sdk
+make -j$(nproc)
 sudo make install
-picotool version
+
+```
+- Create a config.h file in the root directory of this repo
+```
+#ifndef CONFIG_H
+#define CONFIG_H
+
+#define FIRMWARE_VERSION 1
+
+#define WIFI_SSID "your_ssid"
+#define WIFI_PASSWORD "your_password"
+#define PICO_SDK_PATH "path/to/pico-sdk"
+#define HTTP_SERVER_HOST "ip_address"
+#define HTTP_SERVER_PORT 4567
+
+#endif
 ```
 
-- Install uf2conv (NOTE: included in the repo so not really needed)
-```
-wget https://raw.githubusercontent.com/microsoft/uf2/master/utils/uf2conv.py
-wget https://raw.githubusercontent.com/microsoft/uf2/master/utils/uf2families.json
-```
+=====================================================
+
 
 - Install openssl and generate firmware keys
 ```
@@ -111,21 +101,6 @@ sudo picotool otp load otp.json
 ```
 
 
-# Create a config.h file in the root directory of this repo
-```
-#ifndef CONFIG_H
-#define CONFIG_H
-
-#define FIRMWARE_VERSION 1
-
-#define WIFI_SSID "your_ssid"
-#define WIFI_PASSWORD "your_password"
-#define PICO_SDK_PATH "path/to/pico-sdk"
-#define HTTP_SERVER_HOST "ip_address"
-#define HTTP_SERVER_PORT 4567
-
-#endif
-```
 
 # Setup and run HTTP server
 ```
