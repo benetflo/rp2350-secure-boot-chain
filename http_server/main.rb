@@ -1,5 +1,6 @@
 require 'sinatra'
 require 'json'
+require 'openssl'
 
 def load_port
     File.readlines('../config.h', chomp: true).each do |line|
@@ -14,6 +15,20 @@ def load_port
     return 4567
 end
 
+def verify_firmware(bin_path, pubkey_path)
+    fw = File.binread(bin_path)
+    fw_data = fw[0..-65]
+    sig = fw[-64..]
+    
+    fw_hash = OpenSSL::Digest::SHA256.digest(fw_data)
+    
+    pubkey = OpenSSL::PKey.read(File.read(pubkey_path))
+    pubkey.verify(nil, sig, fw_hash)
+rescue => e
+    puts "Verification error for #{bin_path}: #{e}"
+    false
+end
+
 def firmware_dir_empty
     Dir.glob("firmware/*.bin").empty?
 end
@@ -25,6 +40,14 @@ end
 port = load_port()
 set :bind, '0.0.0.0'
 set :port, port
+
+# remove files in firmware dir that does not match firmware signature
+Dir.glob("firmware/*.bin").each do |f|
+    unless verify_firmware(f, '../firmware_public_key.pem')
+        puts "WARNING: #{f} failed signature verification, removing"
+        File.delete(f)
+    end
+end
 
 get '/firmware' do
     if firmware_dir_empty()

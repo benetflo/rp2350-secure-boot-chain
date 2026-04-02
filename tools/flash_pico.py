@@ -4,8 +4,8 @@ import shutil
 import platform
 import argparse
 
-BOOTLOADER = "build/bootloader/bootloader.uf2"
-FIRMWARE = "build/firmware/firmware.uf2"
+BOOTLOADER = "uf2/signed_bootloader.uf2"
+FIRMWARE = "uf2/signed_firmware_a.uf2"
 
 parser = argparse.ArgumentParser()
 
