@@ -164,14 +164,18 @@ static void flash_write_chunk(const uint8_t *data, size_t len)
             // Radera sektor om vi är i början av en ny sektor
             if (flash_write_offset % FLASH_SECTOR_SIZE == 0)
             {
+                multicore_lockout_start_blocking();
                 uint32_t ints = save_and_disable_interrupts();
                 flash_range_erase(get_inactive_flash_offset() + flash_write_offset, FLASH_SECTOR_SIZE);
                 restore_interrupts(ints);
+                multicore_lockout_end_blocking();
             }
 
+            multicore_lockout_start_blocking();
             uint32_t ints = save_and_disable_interrupts();
             flash_range_program(get_inactive_flash_offset() + flash_write_offset, flash_page_buf, FLASH_PAGE_SIZE);
             restore_interrupts(ints);
+            multicore_lockout_end_blocking();
 
             flash_write_offset += FLASH_PAGE_SIZE;
             flash_page_buf_len = 0;
@@ -231,13 +235,17 @@ static void internal_result_fn(void * arg, httpc_result_t httpc_result, u32_t rx
         
         if (flash_write_offset % FLASH_SECTOR_SIZE == 0)
         {
+            multicore_lockout_start_blocking();
             uint32_t ints = save_and_disable_interrupts();
             flash_range_erase(get_inactive_flash_offset() + flash_write_offset, FLASH_SECTOR_SIZE);
             restore_interrupts(ints);
+            multicore_lockout_end_blocking();
         }
+        multicore_lockout_start_blocking();
         uint32_t ints = save_and_disable_interrupts();
         flash_range_program(get_inactive_flash_offset() + flash_write_offset, flash_page_buf, FLASH_PAGE_SIZE);
         restore_interrupts(ints);
+        multicore_lockout_end_blocking();
         flash_write_offset += FLASH_PAGE_SIZE;
         flash_page_buf_len = 0;
     }
@@ -254,9 +262,11 @@ static void internal_result_fn(void * arg, httpc_result_t httpc_result, u32_t rx
     memset(buf, 0xFF, sizeof(buf));
     memcpy(buf, &fw_header, sizeof(fw_header));
     
+    multicore_lockout_start_blocking();
     uint32_t ints = save_and_disable_interrupts();
     flash_range_program(get_inactive_header_offset(), buf, FLASH_PAGE_SIZE);
     restore_interrupts(ints);
+    multicore_lockout_end_blocking();
 
     // Write metadata - activate partition B
     uint8_t meta_buf[FLASH_PAGE_SIZE];
@@ -265,10 +275,12 @@ static void internal_result_fn(void * arg, httpc_result_t httpc_result, u32_t rx
     uint32_t magic  = 0xDEADBEEF;
     memcpy(meta_buf,     &active, 4);
     memcpy(meta_buf + 4, &magic,  4);
+    multicore_lockout_start_blocking();
     ints = save_and_disable_interrupts();
     flash_range_erase(METADATA_FLASH_OFFSET, FLASH_SECTOR_SIZE);
     flash_range_program(METADATA_FLASH_OFFSET, meta_buf, FLASH_PAGE_SIZE);
     restore_interrupts(ints);
+    multicore_lockout_end_blocking();
 
     printf("OTA complete! Rebooting...\n");
     watchdog_reboot(0, 0, 0);
@@ -326,9 +338,11 @@ static int http_client_request_sync(async_context_t * context, HTTP_REQUEST_T * 
 int http_connect (char * host, char * url_request)
 {
     // erase full flash area of inactive partition
+    multicore_lockout_start_blocking();
     uint32_t ints = save_and_disable_interrupts();
     flash_range_erase(get_inactive_flash_offset(), SLOT_SIZE);
     restore_interrupts(ints);
+    multicore_lockout_end_blocking();
     
     // reset all variables before new connections
     flash_write_offset = 0;
