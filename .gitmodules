@@ -1,0 +1,3 @@
+[submodule "libs/hacl-star"]
+	path = libs/hacl-star
+	url = https://github.com/mitls/hacl-star.git
