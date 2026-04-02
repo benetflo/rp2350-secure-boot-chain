@@ -4,7 +4,7 @@
 #include "modules.h"
 #include <stdio.h>
 #include "pico/stdlib.h"
-#include "../config.h"
+#include "config.h"
 
 #define FIRMWARE_B          0x101C0000
 

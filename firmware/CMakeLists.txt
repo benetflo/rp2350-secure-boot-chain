@@ -4,9 +4,6 @@ include($ENV{PICO_SDK_PATH}/pico_sdk_init.cmake)
 
 project(firmware)
 
-pico_sdk_init()
-
-
 add_executable(firmware_a 
         main.c 
         ${CMAKE_CURRENT_SOURCE_DIR}/modules/network.c
