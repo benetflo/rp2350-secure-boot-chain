@@ -11,6 +11,7 @@
 
 #define FIRMWARE_B          0x101C0000
 #define LED_PIN 15
+#define OTA_LED 22
 
 void core_1_callback(void);
 
@@ -34,6 +35,9 @@ int main () {
 
 void core_1_callback (void)
 {
+    gpio_init(OTA_LED);
+    gpio_set_dir(OTA_LED, GPIO_OUT);
+    
     uint32_t my_addr = (uint32_t)&main;
     uint32_t running_partition = (my_addr >= FIRMWARE_B) ? 1 : 0;
     
@@ -48,10 +52,12 @@ void core_1_callback (void)
         if (wifi_connect(WIFI_SSID, WIFI_PASSWORD) == 0)
         {
             printf("Core 1: Connected to WiFi\n");
-            int result = http_connect(HTTP_SERVER_HOST, url);
+            gpio_put(OTA_LED, 1);
+            int result = http_connect(HTTP_SERVER_HOST, url); // If successful LED will be reset by reboot
             if (result != 0)
             {
                 printf("Core 1: OTA failed or server unreachable, result=%d\n", result);
+                gpio_put(OTA_LED, 0); 
             }
         }
         sleep_ms(10000); // 10 seconds

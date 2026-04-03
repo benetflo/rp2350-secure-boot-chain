@@ -10,9 +10,9 @@
 #define SLOT_SIZE           0x00180000
 #define METADATA_ADDR       0x10350000
 
-#define GREEN_LED 19
-#define RED_LED 21
-#define YELLOW_LED 22
+#define GREEN_LED 18
+#define RED_LED 19
+#define YELLOW_LED 21
 
 typedef struct
 {
