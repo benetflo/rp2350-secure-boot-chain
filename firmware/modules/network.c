@@ -233,6 +233,7 @@ static void internal_result_fn(void * arg, httpc_result_t httpc_result, u32_t rx
     HTTP_REQUEST_T *req = (HTTP_REQUEST_T*)arg;
     HTTP_DEBUG("result %d len %u server_response %u err %d\n", httpc_result, rx_content_len, srv_res, err);
     req->complete = true;
+    req->result = httpc_result;
 
     if (httpc_result != HTTPC_RESULT_OK || srv_res != 200)
     {
@@ -377,6 +378,7 @@ int http_connect (char * host, char * url_request)
 	req.url = url_request;
     req.headers_fn = http_client_header_print_fn;
 	int result = http_client_request_sync(cyw43_arch_async_context(), &req);
+    printf("HTTP_CONNECT RESULT: %d\n", result);
 
 
 	return result;
