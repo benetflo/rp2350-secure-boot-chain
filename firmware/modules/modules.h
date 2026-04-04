@@ -23,7 +23,7 @@ typedef struct {
 
 typedef struct {
     uint32_t size;
-    uint32_t version;
+    uint16_t version;
     uint8_t  signature[64];
 } fw_header_t; //max 256 bytes
 

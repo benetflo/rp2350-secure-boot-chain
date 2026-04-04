@@ -9,6 +9,8 @@
 
 #define IO_BANK0_BASE    0x40028000
 #define PADS_BANK0_BASE  0x40038000
+#define OTP_DATA_RAW_BASE 0x40134000
+#define ROLLBACK_OTP_ROW 0x0c0 // first row in OTP adress map that documentation recommends for user content
 
 void gpio_init_output(uint32_t pin)
 {
@@ -29,9 +31,28 @@ void delay(uint32_t count)
     while(count--) __asm__ volatile("nop");
 }
 
-static uint32_t otp_read_min_version()
+static uint32_t popcount16(uint16_t val)
 {
-    return 0;
+    uint32_t count = 0;
+    while (val)
+    {
+        count += val & 1;
+        val >>= 1;
+    }
+    return count;
+}
+
+static uint16_t otp_read_min_version()
+{
+    volatile uint16_t *row = (volatile uint16_t *)(OTP_DATA_RAW_BASE + (ROLLBACK_OTP_ROW * 4)); // first row in recommended user content. 
+    
+    if (popcount16(*row & 0xFFFF) == 0)
+    {
+        gpio_init_output(16);
+        gpio_high(16);
+    }
+    
+    return popcount16(*row & 0xFFFF); // returns the amount of 1's in the 16-bit register
 }
 
 int check_firmware_version(uint8_t partition_flag)
@@ -47,8 +68,8 @@ int check_firmware_version(uint8_t partition_flag)
         temp_hdr = (fw_header_t*)FIRMWARE_B_HEADER;
     }
 
-    uint32_t fw_version = temp_hdr->version;
-    uint32_t min_version = otp_read_min_version();
+    uint16_t fw_version = temp_hdr->version;
+    uint16_t min_version = otp_read_min_version();
 
     if (fw_version < min_version) // ROLLBACK PROTECTION
     {

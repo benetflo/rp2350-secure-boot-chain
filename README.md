@@ -6,7 +6,8 @@
 - picotool
 - openssl
 - python3
-- Pico SDK at `/home/benji/pico-sdk` (or set `PICO_SDK_PATH`) *FIX THIS PATH*
+- Pico SDK
+- ruby & ruby bundler
 
 # SETUP
 
@@ -54,21 +55,25 @@ sudo make install
 #endif
 ```
 
-=====================================================
-
-
-- Install openssl and generate firmware keys
+# Setup and run HTTP server
 ```
-sudo apt install openssl
-openssl genpkey -algorithm ed25519 -out private_key.pem
-openssl pkey -in private_key.pem -pubout -out public_key.pem
+cd http_server
+sudo apt install ruby ruby-bundler
+bundle install
+ruby main.rb
 ```
 
-# Activating secure boot on RP2350 (CRITICAL SECTION, ERRORS HERE COULD BRICK SECURE BOOT)
+
+========================================================================
+# CRITICAL SECTION, ERRORS HERE COULD BRICK SOME FEATURES OF SECURE BOOT
+========================================================================
 
 > **DISCLAIMER:** This guide is provided as-is for educational purposes. I take no responsibility 
 > for bricked devices, lost keys, or any other damages resulting from following these instructions. 
 > Do your own research before burning OTP — it is a permanent and irreversible operation.
+
+
+## Activating secure boot on RP2350.
 
 - Create keys (signing of bootloader is done during build stage)
 ```
@@ -76,10 +81,18 @@ openssl ecparam -name secp256k1 -genkey -noout -out bootloader_private_key.pem
 openssl ec -in bootloader_private_key.pem -pubout -out bootloader_public_key.pem
 ```
 
+- Create and generate firmware keys while we are at it :)
+```
+openssl genpkey -algorithm ed25519 -out firmware_private_key.pem
+openssl pkey -in firmware_private_key.pem -pubout -out firmware_public_key.pem
+```
+
 - Build project
 ```
 bash proj_build.sh
 ```
+
+### NOTE: FLASH BOOTLOADER AND FIRMWARE TO CHECK THAT EVERYTHING IS WORKING BEFORE PROGRAMMING OTP.
 
 - Verify that key-hash is correct (should be the same)
 ```
@@ -87,7 +100,13 @@ openssl ec -in bootloader_private_key.pem -pubout -outform DER | tail -c 65 | ta
 python3 -c "import json; otp=json.load(open('otp.json')); print(''.join(f'{b:02x}' for b in otp['bootkey0']))"
 ```
 
-- If using WSL on Windows, expose RP2350 via usbipd before programming OTP
+
+- Program OTP and burn bootloader key PERMANENTLY
+```
+sudo picotool otp load otp.json
+```
+
+- If using WSL on Windows like me, expose RP2350 via usbipd before programming OTP
 ```
 winget install usbipd
 usbipd list
@@ -95,17 +114,17 @@ usbipd bind --busid <busid>
 usbipd attach --wsl --busid <busid>
 ```
 
-- Program OTP and burn bootloader key PERMANENTLY
+## Programming OTP for rollback protection
+
+- Programming minimum firmware version for rollback protection in OTP. The first available memory address recommended for user content by the RP2350 datasheet was used (row 0x0c0). Setting bit 0 to 1 encodes a minimum firmware version of 1 using a thermometer code, the bootloader counts the number of set bits (popcount) to determine the minimum allowed version.
 ```
-sudo picotool otp load otp.json
+sudo picotool otp set 0x0c0 0x0001
 ```
 
-
-
-# Setup and run HTTP server
+NOTE: Each time you want to flash a new firmware image with a new version:
+- Update firmware versions in "config.h" and "http_server/versions.json".
+- Burn the next bit in OTP register IF you want to permanently block earlier versions from running.
+For version two this would look like this
 ```
-cd http_server
-sudo apt install ruby ruby-bundler
-bundle install
-ruby main.rb
+sudo picotool otp set 0x0c0 0x0003
 ```

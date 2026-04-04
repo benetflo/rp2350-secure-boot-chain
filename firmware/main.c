@@ -15,7 +15,8 @@
 
 void core_1_callback(void);
 
-int main () {
+int main () 
+{
 
     stdio_init_all();
     //sleep_ms(5000);
