@@ -3,4 +3,7 @@
 * CLEANUP TOOLS FOLDER, MAKE CLASS AND ONE FILE?
 * ADD MAKE RECOVER WITH SUDO PICOTOOL ERASE -A
 * RECOVERY IF POWER IS LOST DURING OTA UPDATE.
+* hash metadata struct to prevent tampering with partitions.
+* Controll of firmware header to prevent out of bounds read. size variable
+* Recovery if signature fails instead of Red led and infinite while loop
 
