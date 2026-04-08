@@ -1,6 +1,21 @@
-# Pico2 Secure Bootchain
+# Raspberry Pi Pico 2 Secure Bootchain
 
-*Before building...*
+This project was my Examensarbete/YH thesis for the IoT- & Embedded developer program at JENSEN Yrkeshögskola in Stockholm. This is my implementation of a secure boot chain on the Raspberry Pi Pico 2 (RP2350). 
+
+# About the project
+This project contains:
+
+* A hardware root of trust based on the RP2350 boot ROM.
+* A custom secure bootloader that is verified by the ROM bootloader via a public key stored in OTP. The key is signed using the secp256k1 algorithm. 
+* Signed firmware images that are verified by the custom bootloader. The firmware is signed using the Ed25519 algorithm.
+* A/B partitions (1.5 MB each) for fail-safe updates.
+* Rollback protection using OTP, to prevent downgrading to vulnerable firmware versions.
+* A simple HTTP server for OTA updates.
+* Scripts for building, signing and flashing firmware.
+
+
+# Guide for using this project
+
 ## Requirements
 - arm-none-eabi-gcc
 - picotool

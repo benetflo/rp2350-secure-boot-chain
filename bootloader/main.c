@@ -15,8 +15,8 @@ static uint8_t public_key[32] =
 
 static uint8_t partition_flag = 0; // default == A
 
-int main (void) {
-      
+int main (void) 
+{      
     gpio_init_output(YELLOW_LED);
     gpio_init_output(RED_LED);
 
@@ -94,7 +94,8 @@ int main (void) {
 
         Hacl_Hash_SHA2_hash_256(fw_hash, firmware, firmware_size);
 
-        if (!Hacl_Ed25519_verify(public_key, 32, fw_hash, fw_sig)) {
+        if (!Hacl_Ed25519_verify(public_key, 32, fw_hash, fw_sig)) 
+        {
             // båda slots ogiltiga → stanna i rött
             gpio_low(YELLOW_LED);
             gpio_high(RED_LED);
