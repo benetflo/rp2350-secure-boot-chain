@@ -3,6 +3,8 @@
 This project was my Examensarbete/YH thesis for the IoT- & Embedded developer program at JENSEN Yrkeshögskola in Stockholm. This is my implementation of a secure boot chain on the Raspberry Pi Pico 2 (RP2350). 
 
 # About the project
+The system enforces a chain of trust from boot ROM to application firmware, ensuring that only authenticated and integrity-verified code is executed.
+
 This project contains:
 
 * A hardware root of trust based on the RP2350 boot ROM.
@@ -13,6 +15,21 @@ This project contains:
 * A simple HTTP server for OTA updates.
 * Scripts for building, signing and flashing firmware.
 
+*This project defends against:*
+* Boot process tampering by ensuring that only trusted, signed bootloaders are executed.
+* Firmware integrity attacks by ensuring that only signed firmware images are executed.
+* Rollback attacks by enforcing firmware version control using OTP memory.
+* Safe fallback to functional firmware by using A/B partitions, if errors were to occur during OTA updates or due to corrupted firmware images.
+
+*This project does NOT defend against:*
+* Physical attacks, such as hardware probing, memory extraction, or fault injection.
+* Side-channel attacks, including timing or power analysis attacks.
+* Attacks targeting the underlying hardware, such as exploitation of vulnerabilities in the boot ROM.
+* Network-level attacks beyond the implemented security mechanisms of the update server.
+
+This project does not make use of ARM TrustZone. However, it is recommended as an additional layer of security, as it enables the isolation of critical parts of the system, such as the bootloader, in a secure memory and execution environment.
+
+The reason TrustZone is not used in this project is that the implementation was started without considering it. Therefore, integrating TrustZone at this stage would require a complete refactoring of the existing codebase. When comparing the effort required for such a refactor to the benefits it would provide, it was determined that it was not worth implementing within the scope and time constraints of this project. However, future work could consider integrating ARM TrustZone to further enhance system isolation and security.
 
 # Guide for using this project
 
