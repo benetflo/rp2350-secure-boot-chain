@@ -7,3 +7,6 @@
 * Controll of firmware header to prevent out of bounds read. size variable
 * Recovery if signature fails instead of Red led and infinite while loop
 * Helhetslosning for hur man gor OTP sakert. Tex resterande OTP slots, user content, key slots etc
+* Fuzz testing? onefuzz?
+* clang tidy for MISRA C and other stuff.
+* Write bootloader in Rust for comparison, discuss in rapport?
