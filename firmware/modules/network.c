@@ -232,9 +232,12 @@ static void internal_result_fn(void * arg, httpc_result_t httpc_result, u32_t rx
     assert(arg);
     HTTP_REQUEST_T *req = (HTTP_REQUEST_T*)arg;
     HTTP_DEBUG("result %d len %u server_response %u err %d\n", httpc_result, rx_content_len, srv_res, err);
+    
+    // Mark request as completed
     req->complete = true;
     req->result = httpc_result;
 
+    // Abort if HTTP failed or server did not return 200 OK
     if (httpc_result != HTTPC_RESULT_OK || srv_res != 200)
     {
         printf("OTA skipped: httpc_result=%d srv_res=%u\n", httpc_result, srv_res);
@@ -243,15 +246,17 @@ static void internal_result_fn(void * arg, httpc_result_t httpc_result, u32_t rx
 
     if (ota_skip)
     {
-        //Firmware is up to date, no update needed
+        //Firmware is up to date, no update needed -> skip
         return;
     }
 
-    // Flush remaining bytes i page buffer
+    // Flush remaining bytes in page buffer to flash
     if (flash_page_buf_len > 0)
     {
+        // Pad remaining bytes with 0xFF
         memset(flash_page_buf + flash_page_buf_len, 0xFF, FLASH_PAGE_SIZE - flash_page_buf_len);
         
+        // Erase sector if at sector boundary
         if (flash_write_offset % FLASH_SECTOR_SIZE == 0)
         {
             multicore_lockout_start_blocking();
@@ -260,23 +265,30 @@ static void internal_result_fn(void * arg, httpc_result_t httpc_result, u32_t rx
             restore_interrupts(ints);
             multicore_lockout_end_blocking();
         }
+
+        // Program one flash page
         multicore_lockout_start_blocking();
         uint32_t ints = save_and_disable_interrupts();
         flash_range_program(get_inactive_flash_offset() + flash_write_offset, flash_page_buf, FLASH_PAGE_SIZE);
         restore_interrupts(ints);
         multicore_lockout_end_blocking();
+        
         flash_write_offset += FLASH_PAGE_SIZE;
         flash_page_buf_len = 0;
     }
 
-    // Write firmware size and version to header
+    // Calculate firmware size (excluding signature)
     uint32_t fw_size = total_bytes_recv - 64;
-    uint32_t fw_version = FIRMWARE_VERSION; // get version from config.h 
+    
+    // Set firmware version from config
+    uint32_t fw_version = FIRMWARE_VERSION; 
 
+    // Prepare firmware header
     fw_header_t fw_header = {0};
     fw_header.size = fw_size;
     fw_header.version = fw_version;
 
+    // Write header to flash
     uint8_t buf[FLASH_PAGE_SIZE];
     memset(buf, 0xFF, sizeof(buf));
     memcpy(buf, &fw_header, sizeof(fw_header));
@@ -287,13 +299,16 @@ static void internal_result_fn(void * arg, httpc_result_t httpc_result, u32_t rx
     restore_interrupts(ints);
     multicore_lockout_end_blocking();
 
-    // Write metadata - activate partition B
+    // Update metadata: mark new partition as active
     uint8_t meta_buf[FLASH_PAGE_SIZE];
     memset(meta_buf, 0xFF, FLASH_PAGE_SIZE);
+
     uint32_t active = get_inactive_partition_id();
     uint32_t magic  = 0xDEADBEEF;
-    memcpy(meta_buf,     &active, 4);
-    memcpy(meta_buf + 4, &magic,  4);
+
+    memcpy(meta_buf,     &active, 4); // activate partition ID
+    memcpy(meta_buf + 4, &magic,  4); // valid metadata marker
+
     multicore_lockout_start_blocking();
     ints = save_and_disable_interrupts();
     flash_range_erase(METADATA_FLASH_OFFSET, FLASH_SECTOR_SIZE);
@@ -301,6 +316,7 @@ static void internal_result_fn(void * arg, httpc_result_t httpc_result, u32_t rx
     restore_interrupts(ints);
     multicore_lockout_end_blocking();
 
+    // Reboot into new firmware
     printf("OTA complete! Rebooting...\n");
     watchdog_reboot(0, 0, 0);
 }
