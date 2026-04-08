@@ -27,7 +27,7 @@ int main (void) {
     uint32_t firmware_base;
     fw_header_t * fw_hdr;
 
-    if (meta->magic != 0xDEADBEEF) // first boot
+    if (meta->magic != 0xDEADBEEF) // first boot, check if metadata is valid
     {
         partition_flag = 0;
         firmware_base = FIRMWARE_A;
