@@ -1,79 +1,142 @@
 cmake_minimum_required(VERSION 3.13)
 
-include($ENV{PICO_SDK_PATH}/pico_sdk_init.cmake)
+# Project root directory
+set(ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/..)
 
-project(firmware)
+set(A_BASE_ADDR 0x10040000)
+set(A_FIRMWARE_HEADER 0x101BFF00)
+set(A_PARTITION_NUM 0)
 
-add_executable(firmware_a 
-        main.c 
-        ${CMAKE_CURRENT_SOURCE_DIR}/modules/network.c
-)
+set(B_BASE_ADDR 0x101C0000)
+set(B_FIRMWARE_HEADER 0x1033FF00)
+set(B_PARTITION_NUM 1)
 
-target_include_directories(firmware_a PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/modules)
+# Define output dirs
+set(OUT_DIR ${ROOT_DIR}/out/firmware)
+set(SIGNED_DIR ${OUT_DIR}/signed)
+set(UNSIGNED_DIR ${OUT_DIR}/unsigned)
 
-target_link_libraries(firmware_a 
-    pico_stdlib 
-    hardware_gpio
-    pico_cyw43_arch_lwip_threadsafe_background
-    pico_lwip_http
-    hardware_flash
-    pico_multicore
-    hardware_watchdog
-)
+set(PICO_BOARD pico2_w CACHE STRING "Board type")
+include(../cmake/pico_sdk_import.cmake)
 
-file(STRINGS "${CMAKE_SOURCE_DIR}/config.h" FIRMWARE_VERSION REGEX "#define FIRMWARE_VERSION ([0-9]+)")
+project(pico2_bootchain)
+pico_sdk_init()
+
+include_directories(${ROOT_DIR})
+
+file(STRINGS "${ROOT_DIR}/config.h" FIRMWARE_VERSION REGEX "#define FIRMWARE_VERSION ([0-9]+)")
 string(REGEX MATCH "[0-9]+" FIRMWARE_VERSION "${FIRMWARE_VERSION}")
 
-target_compile_definitions(firmware_a PRIVATE PARTITION_ID="0")
-pico_set_linker_script(firmware_a ${CMAKE_CURRENT_SOURCE_DIR}/firmware_a.ld)
-
-pico_enable_stdio_usb(firmware_a 1)
-pico_enable_stdio_uart(firmware_a 1)
-
-add_custom_command(TARGET firmware_a POST_BUILD
-    COMMAND arm-none-eabi-objcopy -O binary firmware_a.elf firmware_a.bin
-    COMMAND python3 ${CMAKE_SOURCE_DIR}/tools/sign_firmware.py firmware_a.bin firmware_a.sig firmware_a_signed.bin ${CMAKE_SOURCE_DIR}/firmware_private_key.pem
-    COMMAND python3 ${CMAKE_SOURCE_DIR}/tools/extract_firmware_size.py firmware_a.bin firmware_a_size.bin ${FIRMWARE_VERSION}
-    COMMAND python3 ${CMAKE_SOURCE_DIR}/tools/uf2conv.py firmware_a_signed.bin -o fw_a.uf2 --family RP2350_ARM_S --base 0x10040000
-    COMMAND python3 ${CMAKE_SOURCE_DIR}/tools/uf2conv.py firmware_a_size.bin -b 0x101BFF00 -o size_a.uf2 -f RP2350_ARM_S -c
-    COMMAND python3 ${CMAKE_SOURCE_DIR}/tools/merge_uf2.py fw_a.uf2 size_a.uf2 firmware_a.uf2
-    COMMAND python3 ${CMAKE_SOURCE_DIR}/tools/uf2conv.py firmware_a.bin -o unsigned_firmware_a.uf2 --family RP2350_ARM_S --base 0x10040000
-    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-    COMMENT "Generating and signing firmware.uf2"
-)
-
-add_executable(firmware_b 
-        main.c 
+# ============================================================
+#  FUNCTION TO GENERATE FIRMWARE TARGETS
+# ============================================================
+function(add_firmware TARGET PARTITION_ID LINKER_SCRIPT BASE_ADDR HEADER_ADDR)
+    add_executable(${TARGET}
+        main.c
         ${CMAKE_CURRENT_SOURCE_DIR}/modules/network.c
+    )
+
+    target_include_directories(${TARGET} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/modules)
+
+    target_link_libraries(${TARGET}
+        pico_stdlib
+        hardware_gpio
+        pico_cyw43_arch_lwip_threadsafe_background
+        pico_lwip_http
+        hardware_flash
+        pico_multicore
+        hardware_watchdog
+    )
+
+    target_compile_definitions(${TARGET} PRIVATE PARTITION_ID="${PARTITION_ID}")
+    pico_set_linker_script(${TARGET} ${LINKER_SCRIPT})
+
+    pico_enable_stdio_usb(${TARGET} 1) # DISABLE FOR PRODUCTION
+    pico_enable_stdio_uart(${TARGET} 1) # DISABLE FOR PRODUCTION
+
+    add_custom_command(TARGET ${TARGET} POST_BUILD
+        COMMAND arm-none-eabi-objcopy -O binary ${TARGET}.elf ${TARGET}.bin
+
+        COMMAND python3 ${ROOT_DIR}/tools/sign_firmware.py
+            ${TARGET}.bin
+            ${TARGET}.sig
+            ${TARGET}_signed.bin
+            ${ROOT_DIR}/firmware_private_key.pem
+
+        COMMAND python3 ${ROOT_DIR}/tools/extract_firmware_size.py
+            ${TARGET}.bin
+            ${TARGET}_size.bin
+            ${FIRMWARE_VERSION}
+
+        COMMAND python3 ${ROOT_DIR}/tools/uf2conv.py
+            ${TARGET}_signed.bin
+            -o fw_${PARTITION_ID}.uf2
+            --family RP2350_ARM_S
+            --base ${BASE_ADDR}
+
+        COMMAND python3 ${ROOT_DIR}/tools/uf2conv.py
+            ${TARGET}_size.bin
+            -b ${HEADER_ADDR}
+            -o size_${PARTITION_ID}.uf2
+            -f RP2350_ARM_S
+            -c
+
+        COMMAND python3 ${ROOT_DIR}/tools/merge_uf2.py
+            fw_${PARTITION_ID}.uf2
+            size_${PARTITION_ID}.uf2
+            ${TARGET}.uf2
+
+        COMMAND python3 ${ROOT_DIR}/tools/uf2conv.py
+            ${TARGET}.bin
+            -o unsigned_${TARGET}.uf2
+            --family RP2350_ARM_S
+            --base ${BASE_ADDR}
+
+        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+        COMMENT "Building and signing ${TARGET}"
+
+        # Create output directories
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${SIGNED_DIR}
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${UNSIGNED_DIR}
+
+        # Copy signed output
+        COMMAND ${CMAKE_COMMAND} -E copy
+            ${CMAKE_CURRENT_BINARY_DIR}/${TARGET}.uf2
+            ${SIGNED_DIR}/${TARGET}_v${FIRMWARE_VERSION}.uf2
+
+        COMMAND ${CMAKE_COMMAND} -E copy
+            ${CMAKE_CURRENT_BINARY_DIR}/${TARGET}_signed.bin
+            ${SIGNED_DIR}/${TARGET}_v${FIRMWARE_VERSION}.bin
+
+        # Copy unsigned output
+        COMMAND ${CMAKE_COMMAND} -E copy
+            ${CMAKE_CURRENT_BINARY_DIR}/unsigned_${TARGET}.uf2
+            ${UNSIGNED_DIR}/${TARGET}_v${FIRMWARE_VERSION}.uf2
+
+        COMMAND ${CMAKE_COMMAND} -E copy
+            ${CMAKE_CURRENT_BINARY_DIR}/${TARGET}.bin
+            ${UNSIGNED_DIR}/${TARGET}_v${FIRMWARE_VERSION}.bin
+
+
+    )
+endfunction()
+
+# ============================================================
+#  CREATE FIRMWARE A + B
+# ============================================================
+
+add_firmware(
+    firmware_a
+    ${A_PARTITION_NUM}
+    ${CMAKE_CURRENT_SOURCE_DIR}/firmware_a.ld
+    ${A_BASE_ADDR}
+    ${A_FIRMWARE_HEADER}
 )
 
-target_include_directories(firmware_b PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/modules)
-
-target_link_libraries(firmware_b 
-    pico_stdlib 
-    hardware_gpio
-    pico_cyw43_arch_lwip_threadsafe_background
-    pico_lwip_http
-    hardware_flash
-    pico_multicore
-    hardware_watchdog
+add_firmware(
+    firmware_b
+    ${B_PARTITION_NUM}
+    ${CMAKE_CURRENT_SOURCE_DIR}/firmware_b.ld
+    ${B_BASE_ADDR}
+    ${B_FIRMWARE_HEADER}
 )
-
-pico_set_linker_script(firmware_b ${CMAKE_CURRENT_SOURCE_DIR}/firmware_b.ld)
-target_compile_definitions(firmware_b PRIVATE PARTITION_ID="1")
-
-pico_enable_stdio_usb(firmware_b 1)
-pico_enable_stdio_uart(firmware_b 1)
-
-add_custom_command(TARGET firmware_b POST_BUILD
-    COMMAND arm-none-eabi-objcopy -O binary firmware_b.elf firmware_b.bin
-    COMMAND python3 ${CMAKE_SOURCE_DIR}/tools/sign_firmware.py firmware_b.bin firmware_b.sig firmware_b_signed.bin ${CMAKE_SOURCE_DIR}/firmware_private_key.pem
-    COMMAND python3 ${CMAKE_SOURCE_DIR}/tools/extract_firmware_size.py firmware_b.bin firmware_b_size.bin ${FIRMWARE_VERSION}
-    COMMAND python3 ${CMAKE_SOURCE_DIR}/tools/uf2conv.py firmware_b_signed.bin -o fw_b.uf2 --family RP2350_ARM_S --base 0x101C0000
-    COMMAND python3 ${CMAKE_SOURCE_DIR}/tools/uf2conv.py firmware_b_size.bin -b 0x1033FF00 -o size_b.uf2 -f RP2350_ARM_S -c
-    COMMAND python3 ${CMAKE_SOURCE_DIR}/tools/merge_uf2.py fw_b.uf2 size_b.uf2 firmware_b.uf2
-    COMMAND python3 ${CMAKE_SOURCE_DIR}/tools/uf2conv.py firmware_b.bin -o unsigned_firmware_b.uf2 --family RP2350_ARM_S --base 0x101C0000
-    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-    COMMENT "Generating and signing firmware.uf2"
-)
-
