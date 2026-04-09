@@ -1,11 +1,16 @@
+HIGH PRIO
 * HTTPS ON OTA SERVER
-* CLEANUP TOOLS FOLDER, MAKE CLASS AND ONE FILE?
 * RECOVERY IF POWER IS LOST DURING OTA UPDATE.
 * hash metadata struct to prevent tampering with partitions.
 * Controll of firmware header to prevent out of bounds read. size variable
 * Recovery if signature fails instead of Red led and infinite while loop
-* Helhetslosning for hur man gor OTP sakert. Tex resterande OTP slots, user content, key slots etc
-* Fuzz testing? onefuzz?
-* clang tidy for MISRA C and other stuff.
-* Write bootloader in Rust for comparison, discuss in rapport?
+
+MEDIUM PRIO
 * Rollback protection for bootloader in OTP, use version in config to name binaries and check against OTP value
+* Helhetslosning for hur man gor OTP sakert. Tex resterande OTP slots, user content, key slots etc
+* clang tidy for MISRA C and other stuff.
+
+LOW PRIO
+* Fuzz testing? onefuzz?
+* CLEANUP TOOLS FOLDER, MAKE CLASS AND ONE FILE?
+* Write bootloader in Rust for comparison, discuss in rapport?
