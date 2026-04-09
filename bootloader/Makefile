@@ -4,60 +4,84 @@ OBJCOPY = arm-none-eabi-objcopy
 HACL_DIR = ../libs/hacl-star/dist/portable-gcc-compatible
 
 MAKEFLAGS += -j$(nproc)
-CFLAGS  = -mcpu=cortex-m33 -mthumb -mfloat-abi=soft \
-          -Os \
-          -ffreestanding -nostdlib \
-          -ffunction-sections -fdata-sections \
-		  -I$(HACL_DIR) \
-		  -I../libs/hacl-star/dist/karamel/include \
-          -I../libs/hacl-star/dist/karamel/krmllib/dist/minimal
 
+CFLAGS = -mcpu=cortex-m33 -mthumb -mfloat-abi=soft -Os \
+        -ffreestanding -nostdlib -ffunction-sections -fdata-sections \
+        -I$(HACL_DIR) \
+        -I../libs/hacl-star/dist/karamel/include \
+        -I../libs/hacl-star/dist/karamel/krmllib/dist/minimal
 LDFLAGS = -T bootloader.ld -nostdlib -Wl,--gc-sections
 
-TARGET  = bootloader
-BUILD_DIR = build
-OBJS    = $(BUILD_DIR)/crt0.o $(BUILD_DIR)/embedded_start_block.o $(BUILD_DIR)/embedded_end_block.o $(BUILD_DIR)/main.o $(BUILD_DIR)/mem.o $(BUILD_DIR)/boot_utils.o
-LIB_OBJS = $(BUILD_DIR)/Hacl_Ed25519.o $(BUILD_DIR)/Hacl_Hash_SHA2.o \
-           $(BUILD_DIR)/Hacl_Curve25519_51.o $(BUILD_DIR)/Hacl_EC_Ed25519.o
+TARGET = bootloader
+BUILD  = build
 
-all: $(BUILD_DIR)/$(TARGET).elf $(BUILD_DIR)/$(TARGET).uf2
+OBJS = $(BUILD)/crt0.o $(BUILD)/embedded_start_block.o $(BUILD)/embedded_end_block.o \
+        $(BUILD)/main.o $(BUILD)/mem.o $(BUILD)/boot_utils.o
 
-$(BUILD_DIR)/$(TARGET).elf: $(OBJS) $(LIB_OBJS)
-	@mkdir -p $(BUILD_DIR)
+LIB_OBJS = $(BUILD)/Hacl_Ed25519.o $(BUILD)/Hacl_Hash_SHA2.o \
+            $(BUILD)/Hacl_Curve25519_51.o $(BUILD)/Hacl_EC_Ed25519.o
+
+all: $(BUILD)/$(TARGET).elf $(BUILD)/$(TARGET).uf2
+
+$(BUILD)/$(TARGET).elf: $(OBJS) $(LIB_OBJS)
+	@mkdir -p $(BUILD)
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^
 
-$(BUILD_DIR)/%.o: $(HACL_DIR)/%.c
-	@mkdir -p $(BUILD_DIR)
+# Generic rule for HACL sources
+$(BUILD)/%.o: $(HACL_DIR)/%.c
+	@mkdir -p $(BUILD)
 	$(CC) $(CFLAGS) -c -o $@ $<
 
-$(BUILD_DIR)/crt0.o: crt0.S
-	@mkdir -p $(BUILD_DIR)
+# Generic rule for local C and ASM sources
+$(BUILD)/%.o: %.c
+	@mkdir -p $(BUILD)
 	$(CC) $(CFLAGS) -c -o $@ $<
 
-$(BUILD_DIR)/embedded_start_block.o: embedded_start_block.S
-	@mkdir -p $(BUILD_DIR)
+$(BUILD)/%.o: %.S
+	@mkdir -p $(BUILD)
 	$(CC) $(CFLAGS) -c -o $@ $<
 
-$(BUILD_DIR)/embedded_end_block.o: embedded_end_block.S
-	@mkdir -p $(BUILD_DIR)
-	$(CC) $(CFLAGS) -c -o $@ $<
+# Seal and sign bootloader
+UF2_OUT := ../out/bootloader
+SIGNED_DIR := $(UF2_OUT)/signed
+UNSIGNED_DIR := $(UF2_OUT)/unsigned
 
-$(BUILD_DIR)/main.o: main.c
-	@mkdir -p $(BUILD_DIR)
-	$(CC) $(CFLAGS) -c -o $@ $<
+$(BUILD)/$(TARGET).uf2: $(BUILD)/$(TARGET).elf
+    # Create output directories
+	mkdir -p $(SIGNED_DIR)
+	mkdir -p $(UNSIGNED_DIR)
 
-$(BUILD_DIR)/mem.o: mem.c
-	@mkdir -p $(BUILD_DIR)
-	$(CC) $(CFLAGS) -c -o $@ $<
+	picotool seal --sign \
+        $(BUILD)/$(TARGET).elf \
+        $(BUILD)/signed_$(TARGET).elf \
+        ../bootloader_private_key.pem \
+        ../otp.json
 
-$(BUILD_DIR)/boot_utils.o: boot_utils.c
-	@mkdir -p $(BUILD_DIR)
-	$(CC) $(CFLAGS) -c -o $@ $<
+	$(OBJCOPY) -O binary \
+        $(BUILD)/signed_$(TARGET).elf \
+        $(BUILD)/signed_$(TARGET).bin
 
-$(BUILD_DIR)/$(TARGET).uf2: $(BUILD_DIR)/$(TARGET).elf
-	picotool seal $< $(BUILD_DIR)/sealed_$(TARGET).elf
-	$(OBJCOPY) -O binary $(BUILD_DIR)/sealed_$(TARGET).elf $(BUILD_DIR)/sealed_$(TARGET).bin
-	python3 ../tools/uf2conv.py $(BUILD_DIR)/sealed_$(TARGET).bin -o $@ --family RP2350_ARM_S --base 0x10000000
+	python3 ../tools/uf2conv.py \
+        $(BUILD)/signed_$(TARGET).bin \
+        -o $(BUILD)/signed_$(TARGET).uf2 \
+        --family RP2350_ARM_S --base 0x10000000
+
+    # unsigned versions
+	$(OBJCOPY) -O binary \
+        $(BUILD)/$(TARGET).elf \
+        $(BUILD)/unsigned_$(TARGET).bin
+
+	python3 ../tools/uf2conv.py \
+        $(BUILD)/$(TARGET).elf \
+        -o $(BUILD)/unsigned_$(TARGET).uf2 \
+        --family RP2350_ARM_S --base 0x10000000
+
+    # Copy to output structure
+	cp $(BUILD)/signed_$(TARGET).uf2 $(SIGNED_DIR)/bootloader.uf2
+	cp $(BUILD)/signed_$(TARGET).bin $(SIGNED_DIR)/bootloader.bin
+
+	cp $(BUILD)/unsigned_$(TARGET).uf2 $(UNSIGNED_DIR)/bootloader.uf2
+	cp $(BUILD)/unsigned_$(TARGET).bin $(UNSIGNED_DIR)/bootloader.bin
 
 clean:
-	rm -rf $(BUILD_DIR)
+	rm -rf $(BUILD)
