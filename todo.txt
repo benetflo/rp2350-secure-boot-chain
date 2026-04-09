@@ -1,7 +1,5 @@
 * HTTPS ON OTA SERVER
-* ROLLBACK PROTECTION READ FROM OTP FILL IN FUNCTION IN BOOT_UTILS.C
 * CLEANUP TOOLS FOLDER, MAKE CLASS AND ONE FILE?
-* ADD MAKE RECOVER WITH SUDO PICOTOOL ERASE -A
 * RECOVERY IF POWER IS LOST DURING OTA UPDATE.
 * hash metadata struct to prevent tampering with partitions.
 * Controll of firmware header to prevent out of bounds read. size variable
@@ -10,3 +8,4 @@
 * Fuzz testing? onefuzz?
 * clang tidy for MISRA C and other stuff.
 * Write bootloader in Rust for comparison, discuss in rapport?
+* Rollback protection for bootloader in OTP, use version in config to name binaries and check against OTP value

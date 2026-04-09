@@ -102,20 +102,21 @@ function(add_firmware TARGET PARTITION_ID LINKER_SCRIPT BASE_ADDR HEADER_ADDR)
         # Copy signed output
         COMMAND ${CMAKE_COMMAND} -E copy
             ${CMAKE_CURRENT_BINARY_DIR}/${TARGET}.uf2
-            ${SIGNED_DIR}/${TARGET}.uf2
+            ${SIGNED_DIR}/${TARGET}_v${FIRMWARE_VERSION}.uf2
 
         COMMAND ${CMAKE_COMMAND} -E copy
             ${CMAKE_CURRENT_BINARY_DIR}/${TARGET}_signed.bin
-            ${SIGNED_DIR}/${TARGET}.bin
+            ${SIGNED_DIR}/${TARGET}_v${FIRMWARE_VERSION}.bin
 
         # Copy unsigned output
         COMMAND ${CMAKE_COMMAND} -E copy
             ${CMAKE_CURRENT_BINARY_DIR}/unsigned_${TARGET}.uf2
-            ${UNSIGNED_DIR}/${TARGET}.uf2
+            ${UNSIGNED_DIR}/${TARGET}_v${FIRMWARE_VERSION}.uf2
 
         COMMAND ${CMAKE_COMMAND} -E copy
             ${CMAKE_CURRENT_BINARY_DIR}/${TARGET}.bin
-            ${UNSIGNED_DIR}/${TARGET}.bin
+            ${UNSIGNED_DIR}/${TARGET}_v${FIRMWARE_VERSION}.bin
+
 
     )
 endfunction()
