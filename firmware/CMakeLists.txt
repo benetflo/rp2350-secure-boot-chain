@@ -63,7 +63,7 @@ function(add_firmware TARGET PARTITION_ID LINKER_SCRIPT BASE_ADDR HEADER_ADDR)
             ${TARGET}_signed.bin
             ${ROOT_DIR}/firmware_private_key.pem
 
-        COMMAND python3 ${ROOT_DIR}/tools/extract_firmware_size.py
+        COMMAND python3 ${ROOT_DIR}/tools/build_header.py
             ${TARGET}.bin
             ${TARGET}_size.bin
             ${FIRMWARE_VERSION}
