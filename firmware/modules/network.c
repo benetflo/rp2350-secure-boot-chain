@@ -285,6 +285,7 @@ static void internal_result_fn(void * arg, httpc_result_t httpc_result, u32_t rx
 
     // Prepare firmware header
     fw_header_t fw_header = {0};
+    fw_header.magic = FW_MAGIC;
     fw_header.size = fw_size;
     fw_header.version = fw_version;
 

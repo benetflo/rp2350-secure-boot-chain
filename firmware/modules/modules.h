@@ -6,6 +6,8 @@
 #define FIRMWARE_A          0x10040000
 #define FIRMWARE_B          0x101C0000
 
+#define FW_MAGIC 0xB00710AD
+
 #define FIRMWARE_A_FLASH_OFFSET      0x00040000
 #define FIRMWARE_A_HEADER_OFFSET     0x001BFF00
 #define FIRMWARE_B_FLASH_OFFSET      0x001C0000
@@ -22,9 +24,9 @@ typedef struct {
 } OTA_METADATA_T;
 
 typedef struct {
+    uint32_t magic;
     uint32_t size;
     uint16_t version;
-    uint8_t  signature[64];
 } fw_header_t; //max 256 bytes
 
 int wifi_connect(char * ssid, char * password);
