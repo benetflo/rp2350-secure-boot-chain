@@ -78,3 +78,35 @@ int check_firmware_version(uint8_t partition_flag)
 
     return 0; // OK
 }
+
+int firmware_validate_size(uint32_t fw_size, fw_header_t * fw_hdr)
+{
+    // Validate header
+    if (fw_hdr->magic != FW_MAGIC)
+    {
+        gpio_high(RED_LED);
+        return -1;            
+    }
+
+    // Size must be > 0
+    if (fw_size == 0)
+    {
+        gpio_high(RED_LED);
+        return -1;
+    }
+
+    // Size must be 4-byte aligned
+    if (fw_size & 0x3)
+    {
+        gpio_high(RED_LED);
+        return -1;            
+    }
+
+    // Firmware + signature must fit in slot
+    if (fw_size + 64 > SLOT_SIZE)
+    {
+        gpio_high(RED_LED);
+        return -1;
+    }
+    return 0;
+}

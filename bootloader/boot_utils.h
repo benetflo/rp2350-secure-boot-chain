@@ -10,6 +10,9 @@
 #define SLOT_SIZE           0x00180000
 #define METADATA_ADDR       0x10350000
 
+#define FW_MAGIC 0xB00710AD
+
+
 #define GREEN_LED 18
 #define RED_LED 19
 #define YELLOW_LED 21
@@ -21,9 +24,9 @@ typedef struct
 } OTA_METADATA_T;
 
 typedef struct {
+    uint32_t magic;
     uint32_t size;
     uint16_t version;
-    uint8_t  signature[64];
 } fw_header_t; // max 256 bytes
 
 void gpio_init_output(uint32_t pin);
@@ -34,5 +37,6 @@ void gpio_low(uint32_t pin);
 void delay(uint32_t count);
 
 int check_firmware_version(uint8_t partition_flag);
+int firmware_validate_size(uint32_t fw_size, fw_header_t * fw_hdr);
 
 #endif

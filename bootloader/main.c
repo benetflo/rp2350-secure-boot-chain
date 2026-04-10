@@ -27,25 +27,34 @@ int main (void)
     uint32_t firmware_base;
     fw_header_t * fw_hdr;
 
-    if (meta->magic != 0xDEADBEEF) // first boot, check if metadata is valid
+    if (meta->magic == 0xDEADBEEF)
     {
+        if (meta->active_partition == 1)
+        {
+            partition_flag = 1;
+            firmware_base = FIRMWARE_B;
+            fw_hdr = (fw_header_t *)FIRMWARE_B_HEADER;
+        }
+        else
+        {
+            partition_flag = 0;
+            firmware_base = FIRMWARE_A;
+            fw_hdr = (fw_header_t *)FIRMWARE_A_HEADER;
+        }
+    }
+    else // first boot
+    {
+        // No metadata -> default to A
         partition_flag = 0;
         firmware_base = FIRMWARE_A;
         fw_hdr = (fw_header_t *)FIRMWARE_A_HEADER;
-    }
-    else
-    {
-        if (meta->active_partition == 1) 
+        
+        if (fw_hdr->magic != FW_MAGIC) // no firmware flashed, stay in yellow
         {
-            partition_flag = 1;
-            firmware_base   = FIRMWARE_B;
-            fw_hdr = (fw_header_t *)FIRMWARE_B_HEADER;
-        } 
-        else 
-        {
-            partition_flag = 0;
-            firmware_base   = FIRMWARE_A;
-            fw_hdr = (fw_header_t *)FIRMWARE_A_HEADER;
+            while(1)
+            {
+                gpio_high(YELLOW_LED);
+            }
         }
     }
     
@@ -56,6 +65,13 @@ int main (void)
     }
 
     uint32_t firmware_size = fw_hdr->size;
+
+    if (firmware_validate_size(firmware_size, fw_hdr) != 0)
+    {
+        gpio_high(RED_LED);
+        while(1); // fallback to working partition if there is one  
+    }
+
     uint32_t firmware_version = fw_hdr->version;
     uint8_t * firmware = (uint8_t *)firmware_base;
     uint8_t * fw_sig = firmware + firmware_size;
@@ -84,10 +100,17 @@ int main (void)
         if (check_firmware_version(partition_flag) != 0) // ROLLBACK PROTECTION
         {
             gpio_high(RED_LED);
-            while(1);
+            while(1); // fallback to working partition if there is one
         }
 
         firmware_size = fw_hdr->size;
+
+        if (firmware_validate_size(firmware_size, fw_hdr) != 0)
+        {
+            gpio_high(RED_LED);
+            while(1); // fallback to working partition if there is one  
+        }
+
         firmware_version = fw_hdr->version;
         firmware = (uint8_t *)firmware_base;
         fw_sig = firmware + firmware_size;
