@@ -84,9 +84,6 @@ validate_slot:
             goto try_other_slot;
         }
 
-        uint32_t firmware_version = fw_hdr->version;
-        (void)firmware_version; // om du inte använder den vidare
-
         uint8_t *firmware = (uint8_t *)firmware_base;
         uint8_t *fw_sig   = firmware + firmware_size;
 
