@@ -2,8 +2,7 @@ HIGH PRIO
 * HTTPS ON OTA SERVER
 * RECOVERY IF POWER IS LOST DURING OTA UPDATE.
 * hash metadata struct to prevent tampering with partitions.
-* Controll of firmware header to prevent out of bounds read. size variable
-* Recovery if signature fails instead of Red led and infinite while loop
+* firmware key not hardcoded?
 
 MEDIUM PRIO
 * Rollback protection for bootloader in OTP, use version in config to name binaries and check against OTP value
