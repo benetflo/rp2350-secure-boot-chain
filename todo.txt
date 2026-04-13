@@ -2,7 +2,8 @@ HIGH PRIO
 * HTTPS ON OTA SERVER
 * RECOVERY IF POWER IS LOST DURING OTA UPDATE.
 * hash metadata struct to prevent tampering with partitions.
-* firmware key not hardcoded?
+* firmware key not hardcoded? 
+* Put flash layout adresses in a flash_layout.h and write in it that it is not really secret but it can make reverse engineering alot easier if an attacker would get a hold of the layout.
 
 MEDIUM PRIO
 * Rollback protection for bootloader in OTP, use version in config to name binaries and check against OTP value
