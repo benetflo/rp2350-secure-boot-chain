@@ -4,6 +4,7 @@ HIGH PRIO
 * hash metadata struct to prevent tampering with partitions.
 * firmware key not hardcoded? 
 * Put flash layout adresses in a flash_layout.h and write in it that it is not really secret but it can make reverse engineering alot easier if an attacker would get a hold of the layout.
+* Add LOG macro with #ifdef debug as a first security measure in code. 
 
 MEDIUM PRIO
 * Rollback protection for bootloader in OTP, use version in config to name binaries and check against OTP value
