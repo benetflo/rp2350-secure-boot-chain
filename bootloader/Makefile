@@ -5,11 +5,15 @@ HACL_DIR = ../libs/hacl-star/dist/portable-gcc-compatible
 
 MAKEFLAGS += -j$(nproc)
 
-CFLAGS = -mcpu=cortex-m33 -mthumb -mfloat-abi=soft -Os \
+BUILD_TYPE ?= debug
+
+CFLAGS += -mcpu=cortex-m33 -mthumb -mfloat-abi=soft -Os \
         -ffreestanding -nostdlib -ffunction-sections -fdata-sections \
         -I$(HACL_DIR) \
         -I../libs/hacl-star/dist/karamel/include \
-        -I../libs/hacl-star/dist/karamel/krmllib/dist/minimal
+        -I../libs/hacl-star/dist/karamel/krmllib/dist/minimal \
+        $(if $(filter release,$(BUILD_TYPE)),-DNDEBUG,)
+
 LDFLAGS = -T bootloader.ld -nostdlib -Wl,--gc-sections
 
 TARGET = bootloader

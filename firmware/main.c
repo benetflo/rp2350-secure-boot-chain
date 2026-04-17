@@ -7,6 +7,7 @@
 #include <stdio.h>
 
 #include "modules.h"
+#include "flash_layout.h"
 #include "config.h"
 
 #define FIRMWARE_B          0x101C0000
