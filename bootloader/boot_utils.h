@@ -21,6 +21,7 @@ typedef struct
 {
     uint32_t active_partition; // 0 == A, 1 == B
     uint32_t magic;
+    uint8_t hash[32];
 } OTA_METADATA_T;
 
 typedef struct {

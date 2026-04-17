@@ -34,6 +34,7 @@
 typedef struct {
     uint32_t active_partition;
     uint32_t magic;
+    uint8_t hash[32];
 } OTA_METADATA_T;
 
 typedef struct {

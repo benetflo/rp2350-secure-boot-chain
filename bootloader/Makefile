@@ -12,7 +12,7 @@ CFLAGS += -mcpu=cortex-m33 -mthumb -mfloat-abi=soft -Os \
         -I$(HACL_DIR) \
         -I../libs/hacl-star/dist/karamel/include \
         -I../libs/hacl-star/dist/karamel/krmllib/dist/minimal \
-        $(if $(filter release,$(BUILD_TYPE)),-DNDEBUG,)
+        $(if $(filter release,$(BUILD_TYPE)),-DNDEBUG,) \
 
 LDFLAGS = -T bootloader.ld -nostdlib -Wl,--gc-sections
 

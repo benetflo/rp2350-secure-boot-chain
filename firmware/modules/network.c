@@ -92,7 +92,13 @@ static err_t internal_header_fn(httpc_state_t * connection, void * arg, struct p
         ota_skip = 1;
     }
     
-    assert(arg);
+    if (arg == NULL)
+    {
+        LOG_ERROR("internal_header_fn: arg was NULL\n");
+        ota_skip = 1;
+        return ERR_ARG;
+    }
+
     HTTP_REQUEST_T *req = (HTTP_REQUEST_T*)arg;
     
 	if (req->headers_fn) 
@@ -138,6 +144,7 @@ static void flash_write_chunk(const uint8_t *data, size_t len)
     total_bytes_recv += len;
     LOG("recv chunk len=%u total=%u\n", len, total_bytes_recv);
 	size_t i = 0;
+    
     while (i < len)
     {
         flash_page_buf[flash_page_buf_len++] = data[i++];
@@ -184,7 +191,13 @@ static int handle_payload (struct pbuf * p)
 
 static err_t internal_recv_fn(void * arg, struct altcp_pcb * conn, struct pbuf * p, err_t err) 
 {   
-    assert(arg);
+    if (arg == NULL)
+    {
+        LOG_ERROR("internal_recv_fn: arg was NULL\n");
+        ota_skip = 1;
+        return ERR_ARG;
+    }
+
     HTTP_REQUEST_T *req = (HTTP_REQUEST_T*)arg;
     
     if (!p)
@@ -211,7 +224,13 @@ static err_t internal_recv_fn(void * arg, struct altcp_pcb * conn, struct pbuf *
 
 static void internal_result_fn(void * arg, httpc_result_t httpc_result, u32_t rx_content_len, u32_t srv_res, err_t err) 
 {
-    assert(arg);
+    if (arg == NULL)
+    {
+        LOG_ERROR("internal_result_fn: arg was NULL\n");
+        ota_skip = 1;
+        return;
+    }
+
     HTTP_REQUEST_T *req = (HTTP_REQUEST_T*)arg;
     LOG("result %d len %u server_response %u err %d\n", httpc_result, rx_content_len, srv_res, err);
     
@@ -288,9 +307,13 @@ static void internal_result_fn(void * arg, httpc_result_t httpc_result, u32_t rx
 
     uint32_t active = get_inactive_partition_id();
     uint32_t magic  = 0xDEADBEEF;
-
+    
     memcpy(meta_buf,     &active, 4); // activate partition ID
     memcpy(meta_buf + 4, &magic,  4); // valid metadata marker
+
+    uint8_t meta_hash[32] = {0};
+    Hacl_Hash_SHA2_hash_256(meta_hash, meta_buf, 8); // hash active_partition + magic
+    memcpy(meta_buf + 8, meta_hash, 32); // metadata hash
 
     multicore_lockout_start_blocking();
     ints = save_and_disable_interrupts();
@@ -337,7 +360,13 @@ static int http_client_request_async(async_context_t * context, HTTP_REQUEST_T *
 // Make a http request and only return when it has completed. Returns true on success
 static int http_client_request_sync(async_context_t * context, HTTP_REQUEST_T * req) 
 {
-    assert(req);
+    if (req == NULL)
+    {
+        LOG_ERROR("http_client_request_sync: req was NULL\n");
+        ota_skip = 1;
+        return ERR_ARG;
+    }
+
     int ret = http_client_request_async(context, req);
     
 	if (ret != 0) 
