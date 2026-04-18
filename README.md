@@ -1,6 +1,6 @@
 # Raspberry Pi Pico 2 Secure Bootchain
 
-This project was my Examensarbete/YH thesis for the IoT- & Embedded developer program at JENSEN Yrkeshögskola in Stockholm. This is my implementation of a secure boot chain on the Raspberry Pi Pico 2 (RP2350). 
+This project was part of my Examensarbete/YH thesis for the IoT- & Embedded developer program at JENSEN Yrkeshögskola in Stockholm. This is my implementation of a secure boot chain on the Raspberry Pi Pico 2 (RP2350). 
 
 # About the project
 The system enforces a chain of trust from boot ROM to application firmware, ensuring that only authenticated and integrity-verified code is executed.
