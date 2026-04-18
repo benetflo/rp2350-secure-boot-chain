@@ -36,6 +36,15 @@ int main(void)
     // Pick initial partition
     if (meta->magic == 0xDEADBEEF)
     {
+        // Verify OTA_METADATA struct
+        uint8_t hash_calc[32] = {0};
+        Hacl_Hash_SHA2_hash_256(hash_calc, (uint8_t*)meta, 8);
+        if (memcpy(hash_calc, meta->hash, 32) != 0)
+        {
+            // Metadata is corrupt, try other slot;
+            goto try_other_slot;
+        }
+
         if (meta->active_partition == 1)
         {
             partition_flag = 1;
@@ -140,7 +149,6 @@ boot_firmware:
         gpio_high(GREEN_LED);
         delay(5000000);
 
-        // Vector table in firmware
         uint32_t sp  = *(volatile uint32_t *)(firmware_base + 0);
         uint32_t rst = *(volatile uint32_t *)(firmware_base + 4);
 
@@ -151,6 +159,6 @@ boot_firmware:
             : "r"(sp), "r"(rst)
         );
 
-        while (1);
+        while (1); // this will never be reached
     }
 }

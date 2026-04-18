@@ -3,6 +3,8 @@
 
 #include "modules.h"
 #include "config.h"
+#include "flash_layout.h"
+
 #include "pico/stdlib.h"
 #include "pico/cyw43_arch.h"
 #include "lwip/apps/http_client.h"
@@ -12,26 +14,6 @@
 #include "hardware/sync.h"
 #include "pico/multicore.h"
 #include "hardware/watchdog.h"
-
-#ifndef HTTP_INFO
-#define HTTP_INFO printf
-#endif
-
-#ifndef HTTP_INFOC
-#define HTTP_INFOC putchar
-#endif
-
-#ifndef HTTP_DEBUG
-#ifdef NDEBUG
-#define HTTP_DEBUG
-#else
-#define HTTP_DEBUG printf
-#endif
-#endif
-
-#ifndef HTTP_ERROR
-#define HTTP_ERROR printf
-#endif
 
 typedef struct
 {
@@ -65,7 +47,7 @@ int wifi_connect(char *ssid, char *password)
     }
 
     for (int i = 0; i < 5; i++) {
-        printf("WiFi connect attempt %d\n", i+1);
+        LOG("WiFi connect attempt %d\n", i+1);
 
         if (cyw43_arch_wifi_connect_timeout_ms(
                 ssid, password,
@@ -79,7 +61,7 @@ int wifi_connect(char *ssid, char *password)
     }
 
     // Wifi is dead
-    printf("WiFi failed after retries, rebooting...\n");
+    LOG("WiFi failed after retries, rebooting...\n");
     sleep_ms(2000);
     watchdog_reboot(0, 0, 0);
     return 1; // never reached
@@ -88,14 +70,14 @@ int wifi_connect(char *ssid, char *password)
 // Print headers to stdout
 static err_t http_client_header_print_fn(__unused httpc_state_t * connection, __unused void * arg, struct pbuf * hdr, u16_t hdr_len, __unused u32_t content_len) 
 {
-	HTTP_INFO("\nheaders %u\n", hdr_len);
+	LOG("\nheaders %u\n", hdr_len);
     
 	u16_t offset = 0;
     
 	while (offset < hdr->tot_len && offset < hdr_len) 
 	{
         char c = (char)pbuf_get_at(hdr, offset++);
-        HTTP_INFOC(c);
+        LOG_C(c);
     }
     
 	return ERR_OK;
@@ -110,7 +92,13 @@ static err_t internal_header_fn(httpc_state_t * connection, void * arg, struct p
         ota_skip = 1;
     }
     
-    assert(arg);
+    if (arg == NULL)
+    {
+        LOG_ERROR("internal_header_fn: arg was NULL\n");
+        ota_skip = 1;
+        return ERR_ARG;
+    }
+
     HTTP_REQUEST_T *req = (HTTP_REQUEST_T*)arg;
     
 	if (req->headers_fn) 
@@ -154,8 +142,9 @@ static void flash_write_chunk(const uint8_t *data, size_t len)
     }
     
     total_bytes_recv += len;
-    printf("recv chunk len=%u total=%u\n", len, total_bytes_recv);
+    LOG("recv chunk len=%u total=%u\n", len, total_bytes_recv);
 	size_t i = 0;
+    
     while (i < len)
     {
         flash_page_buf[flash_page_buf_len++] = data[i++];
@@ -202,7 +191,13 @@ static int handle_payload (struct pbuf * p)
 
 static err_t internal_recv_fn(void * arg, struct altcp_pcb * conn, struct pbuf * p, err_t err) 
 {   
-    assert(arg);
+    if (arg == NULL)
+    {
+        LOG_ERROR("internal_recv_fn: arg was NULL\n");
+        ota_skip = 1;
+        return ERR_ARG;
+    }
+
     HTTP_REQUEST_T *req = (HTTP_REQUEST_T*)arg;
     
     if (!p)
@@ -229,9 +224,15 @@ static err_t internal_recv_fn(void * arg, struct altcp_pcb * conn, struct pbuf *
 
 static void internal_result_fn(void * arg, httpc_result_t httpc_result, u32_t rx_content_len, u32_t srv_res, err_t err) 
 {
-    assert(arg);
+    if (arg == NULL)
+    {
+        LOG_ERROR("internal_result_fn: arg was NULL\n");
+        ota_skip = 1;
+        return;
+    }
+
     HTTP_REQUEST_T *req = (HTTP_REQUEST_T*)arg;
-    HTTP_DEBUG("result %d len %u server_response %u err %d\n", httpc_result, rx_content_len, srv_res, err);
+    LOG("result %d len %u server_response %u err %d\n", httpc_result, rx_content_len, srv_res, err);
     
     // Mark request as completed
     req->complete = true;
@@ -240,7 +241,7 @@ static void internal_result_fn(void * arg, httpc_result_t httpc_result, u32_t rx
     // Abort if HTTP failed or server did not return 200 OK
     if (httpc_result != HTTPC_RESULT_OK || srv_res != 200)
     {
-        printf("OTA skipped: httpc_result=%d srv_res=%u\n", httpc_result, srv_res);
+        LOG_ERROR("OTA skipped: httpc_result=%d srv_res=%u\n", httpc_result, srv_res);
         return;
     }
 
@@ -306,9 +307,13 @@ static void internal_result_fn(void * arg, httpc_result_t httpc_result, u32_t rx
 
     uint32_t active = get_inactive_partition_id();
     uint32_t magic  = 0xDEADBEEF;
-
+    
     memcpy(meta_buf,     &active, 4); // activate partition ID
     memcpy(meta_buf + 4, &magic,  4); // valid metadata marker
+
+    uint8_t meta_hash[32] = {0};
+    Hacl_Hash_SHA2_hash_256(meta_hash, meta_buf, 8); // hash active_partition + magic
+    memcpy(meta_buf + 8, meta_hash, 32); // metadata hash
 
     multicore_lockout_start_blocking();
     ints = save_and_disable_interrupts();
@@ -318,7 +323,7 @@ static void internal_result_fn(void * arg, httpc_result_t httpc_result, u32_t rx
     multicore_lockout_end_blocking();
 
     // Reboot into new firmware
-    printf("OTA complete! Rebooting...\n");
+    LOG("OTA complete! Rebooting...\n");
     watchdog_reboot(0, 0, 0);
 }
 
@@ -341,12 +346,12 @@ static int http_client_request_async(async_context_t * context, HTTP_REQUEST_T *
 		async_context_acquire_lock_blocking(context); // lock context so that other threads or interupts does not störa
 		
 		err_t ret = httpc_get_file_dns(req->hostname, req->port ? req->port : port, req->url, &req->settings, internal_recv_fn, req, NULL); // DNS-lookup, open TCP, send GET, recieve data in internal_recv_fn, call internal_result_fn when everythin is done
-		printf("httpc_get_file_dns ret: %d\n", ret);
+		LOG("httpc_get_file_dns ret: %d\n", ret);
 		async_context_release_lock(context); // unlock context
 		
 		if (ret != ERR_OK) 
 		{
-			HTTP_ERROR("http request failed: %d", ret);
+			LOG_ERROR("http request failed: %d", ret);
 		}
 		
 		return ret;
@@ -355,7 +360,13 @@ static int http_client_request_async(async_context_t * context, HTTP_REQUEST_T *
 // Make a http request and only return when it has completed. Returns true on success
 static int http_client_request_sync(async_context_t * context, HTTP_REQUEST_T * req) 
 {
-    assert(req);
+    if (req == NULL)
+    {
+        LOG_ERROR("http_client_request_sync: req was NULL\n");
+        ota_skip = 1;
+        return ERR_ARG;
+    }
+
     int ret = http_client_request_async(context, req);
     
 	if (ret != 0) 
@@ -372,7 +383,7 @@ static int http_client_request_sync(async_context_t * context, HTTP_REQUEST_T * 
         
         if (to_ms_since_boot(get_absolute_time()) - start > 30000)
         {
-            printf("OTA timeout\n");
+            LOG_ERROR("OTA timeout\n");
             return -1;
         }
     }
@@ -395,7 +406,7 @@ int http_connect (char * host, char * url_request)
 	req.url = url_request;
     req.headers_fn = http_client_header_print_fn;
 	int result = http_client_request_sync(cyw43_arch_async_context(), &req);
-    printf("HTTP_CONNECT RESULT: %d\n", result);
+    LOG("HTTP_CONNECT RESULT: %d\n", result);
 
 
 	return result;

@@ -1,11 +1,6 @@
 HIGH PRIO
 * HTTPS ON OTA SERVER
-* RECOVERY IF POWER IS LOST DURING OTA UPDATE.
-* hash metadata struct to prevent tampering with partitions.
 * firmware key not hardcoded? 
-* Put flash layout adresses in a flash_layout.h and write in it that it is not really secret but it can make reverse engineering alot easier if an attacker would get a hold of the layout.
-* Add LOG macro with #ifdef debug as a first security measure in code. 
-* Go through files and change assert() to real checks. Check network.c and other files. Should check if NULL for example.
 
 MEDIUM PRIO
 * Rollback protection for bootloader in OTP, use version in config to name binaries and check against OTP value
@@ -16,3 +11,25 @@ LOW PRIO
 * Fuzz testing? onefuzz?
 * CLEANUP TOOLS FOLDER, MAKE CLASS AND ONE FILE?
 * Write bootloader in Rust for comparison, discuss in rapport?
+
+TESTS
+Shut off power during OTA update  
+→ Testa med signerad + osignerad
+
+Flash unsigned firmware and bootloader  
+→ Testa med osignerad
+
+Add unsigned firmware to OTA server and try updating – should fall back to working partition  
+→ Testa med osignerad
+
+Flash firmware version that is lower than minimum in OTP  
+→ Testa med signerad
+
+Try flashing firmware that is larger than SLOT SIZE  
+→ Testa med signerad + osignerad
+
+Manipulate metadata and try flashing – bootloader should not allow  
+→ Testa med signerad
+
+Tampered signed firmware (signerad men modifierad payload utan uppdaterad signatur)  
+→ visar att signaturen verkligen skyddar innehållet, inte bara finns där.

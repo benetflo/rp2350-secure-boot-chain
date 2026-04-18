@@ -2,35 +2,19 @@
 #define MODULES_H
 
 #include <stdint.h>
+#include <stdio.h>
 
-#define FIRMWARE_A          0x10040000
-#define FIRMWARE_B          0x101C0000
-
-#define FW_MAGIC 0xB00710AD
-
-#define FIRMWARE_A_FLASH_OFFSET      0x00040000
-#define FIRMWARE_A_HEADER_OFFSET     0x001BFF00
-#define FIRMWARE_B_FLASH_OFFSET      0x001C0000
-#define FIRMWARE_B_HEADER_OFFSET     0x0033FF00   
-
-#define METADATA_FLASH_OFFSET    0x00350000  // 0x10350000 - 0x10000000
-#define METADATA_ADDR            (XIP_BASE + METADATA_FLASH_OFFSET)
-
-#define SLOT_SIZE 0x180000  // 1.5MB
-
-typedef struct {
-    uint32_t active_partition;
-    uint32_t magic;
-} OTA_METADATA_T;
-
-typedef struct {
-    uint32_t magic;
-    uint32_t size;
-    uint16_t version;
-} fw_header_t; //max 256 bytes
+#ifdef NDEBUG
+    #define LOG(...) do {} while (0)
+    #define LOG_C(...) do {} while (0)
+    #define LOG_ERROR(...) fprintf(stderr, __VA_ARGS__)
+#else
+    #define LOG(...) printf(__VA_ARGS__)
+    #define LOG_C(c) putchar(c)
+    #define LOG_ERROR(...) fprintf(stderr, __VA_ARGS__)
+#endif
 
 int wifi_connect(char * ssid, char * password);
 int http_connect(char * host, char * url_request);
-
 
 #endif
