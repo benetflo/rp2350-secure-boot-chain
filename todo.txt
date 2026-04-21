@@ -2,6 +2,7 @@ HIGH PRIO
 * HTTPS ON OTA SERVER
 * firmware key not hardcoded? 
 * Bug in bootloader memcpy should return 0 not NULL pointer if fail - create new function?
+* Fix Trustzone on bootloader area
 
 MEDIUM PRIO
 * Rollback protection for bootloader in OTP, use version in config to name binaries and check against OTP value
