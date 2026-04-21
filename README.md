@@ -69,7 +69,6 @@ mkdir build && cd build
 cmake .. -DPICO_SDK_PATH=~/pico-sdk
 make -j$(nproc)
 sudo make install
-
 ```
 - Create a config.h file in the root directory of this repo
 ```
@@ -105,7 +104,7 @@ ruby main.rb
 > Do your own research before burning OTP — it is a permanent and irreversible operation.
 
 
-## Activating secure boot on RP2350.
+# Activating secure boot on RP2350.
 
 - Create keys (signing of bootloader is done during build stage)
 ```
@@ -121,10 +120,10 @@ openssl pkey -in firmware_private_key.pem -pubout -out firmware_public_key.pem
 
 - Build project
 ```
-bash proj_build.sh
+make
 ```
 
-### NOTE: FLASH BOOTLOADER AND FIRMWARE TO CHECK THAT EVERYTHING IS WORKING BEFORE PROGRAMMING OTP.
+## NOTE: FLASH BOOTLOADER AND FIRMWARE TO CHECK THAT EVERYTHING IS WORKING BEFORE PROGRAMMING OTP.
 
 - Verify that key-hash is correct (should be the same)
 ```
@@ -146,7 +145,7 @@ usbipd bind --busid <busid>
 usbipd attach --wsl --busid <busid>
 ```
 
-## Programming OTP for rollback protection
+# Programming OTP for rollback protection
 
 - Programming minimum firmware version for rollback protection in OTP. The first available memory address recommended for user content by the RP2350 datasheet was used (row 0x0c0). Setting bit 0 to 1 encodes a minimum firmware version of 1 using a thermometer code, the bootloader counts the number of set bits (popcount) to determine the minimum allowed version.
 ```
