@@ -10,9 +10,13 @@ The implemented security mechanisms are therefore designed to protect against re
 
 ## Security limitations
 
-*Residual risk*: Despite implemented protections (secure boot, A/B partitions, rollback protection, signature verification, TrustZone isolation etc.), the system may still contain unknown vulnerabilities or implementation bugs that have not been discovered during testing.
+#### *Residual risk*: 
+Despite implemented protections (secure boot, A/B partitions, rollback protection, signature verification, TrustZone isolation etc.), the system may still contain unknown vulnerabilities or implementation bugs that have not been discovered during testing.
 
-*Scope of testing*: Testing has focused on the designed threat model and typical failure scenarios (invalid signature, corrupted metadata etc.). More advanced attacks (fault injection, side-channel analysis, hardware probing) have not been tested because they fall outside of the intended threat model.
+#### *Scope of testing*: 
+Testing has focused on the designed threat model and typical failure scenarios (invalid signatures, corrupted metadata, etc.). More advanced attacks (fault injection, side‑channel analysis, hardware probing) have not been tested, nor have security measures against them been implemented, because they fall outside the intended threat model.
+
+The attacks tested in this project are demonstrated in this video: LINK HERE
 
 ## What this project includes:
 
