@@ -1,4 +1,4 @@
-# Raspberry Pi Pico 2 Secure Bootchain
+# RP2350 Secure Boot Chain
 
 This project was part of my Examensarbete/YH thesis for the IoT- & Embedded developer program at JENSEN Yrkeshögskola in Stockholm. This is my implementation of a secure boot chain on the Raspberry Pi Pico 2 (RP2350). 
 
