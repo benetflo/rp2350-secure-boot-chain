@@ -5,14 +5,8 @@ HIGH PRIO
 * Fix Trustzone on bootloader area
 
 MEDIUM PRIO
-* Rollback protection for bootloader in OTP, use version in config to name binaries and check against OTP value
 * Helhetslosning for hur man gor OTP sakert. Tex resterande OTP slots, user content, key slots etc
 * clang tidy for MISRA C and other stuff.
-
-LOW PRIO
-* Fuzz testing? onefuzz?
-* CLEANUP TOOLS FOLDER, MAKE CLASS AND ONE FILE?
-* Write bootloader in Rust for comparison, discuss in rapport?
 
 TESTS
 Shut off power during OTA update  
