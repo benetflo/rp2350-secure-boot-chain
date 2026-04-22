@@ -1,6 +1,7 @@
 HIGH PRIO
 * HTTPS ON OTA SERVER
-* firmware key not hardcoded? 
+* firmware key not hardcoded?
+* CHECK PROBLEMS WITH OTP 
 
 MEDIUM PRIO
 * Helhetslosning for hur man gor OTP sakert. Tex resterande OTP slots, user content, key slots etc
@@ -41,10 +42,17 @@ Flash firmware and bootloader from empty FLASH
 OTA related attacks
 Signed bootloader and signed firmware A is flashed.
 
-- Get unsigned firmware B from OTA server --> Yellow LED followed by RED led and then fall back to A program
+- Get unsigned firmware B from OTA server --> Yellow LED followed by RED led and then fall back to A program OK
 - Get signed firmware B from OTA server with a lower version than minimum version in OTP --> Yellow, Red fall back to A program
 - Get signed firmware B from OTA server with manipulated metadata
 - Get signed firmware B from OTA server that is larger than slot size
 - Power loss during OTA --> Bootloader will detect corrupt image at B and fallback to A
 - Get signed firmware B with tampered payload - signatur should change and not be flashed
 - Signed firmware B with wrong partition in headern -- bootloader should not allow
+
+
+NOTE OTP READ WORKS FINE SOMETHING WITH OTA IS WRONG when comparing vesrsions
+
+problem with header in OTA update so last version is still in header??
+
+works when flashing maybe OTA has to write header also and header is not included in BIN or something?

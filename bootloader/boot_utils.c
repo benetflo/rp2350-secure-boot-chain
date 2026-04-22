@@ -44,7 +44,7 @@ static uint32_t popcount16(uint16_t val)
 
 static uint16_t otp_read_min_version()
 {
-    volatile uint16_t *row = (volatile uint16_t *)(OTP_DATA_RAW_BASE + (ROLLBACK_OTP_ROW * 4)); // first row in recommended user content. 
+    volatile uint16_t *row = (volatile uint16_t *)(OTP_DATA_RAW_BASE + (ROLLBACK_OTP_ROW)); // first row in recommended user content. 
     
     if (popcount16(*row & 0xFFFF) == 0)
     {
