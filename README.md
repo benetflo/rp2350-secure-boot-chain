@@ -24,7 +24,7 @@ The system enforces a continuous chain of trust from the immutable boot ROM to t
 
 # Security limitations
 
-> *Since this is my first security‑focused project, the system should not be considered perfectly secure. I have done my best to apply sound security principles and > make the design as robust as possible within my current experience and the scope of the project.*
+> *Since this is my first security‑focused project, the system should not be considered perfectly secure. I have done my best to apply sound security principles and    make the design as robust as possible within my current experience and the scope of the project.*
 
 ### **Residual risk**: 
 Despite implemented protections (secure boot, A/B partitions, rollback protection, signature verification, TrustZone isolation etc.), the system may still contain unknown vulnerabilities or implementation bugs that have not been discovered during testing.
