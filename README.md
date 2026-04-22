@@ -11,9 +11,9 @@ The implemented security mechanisms are therefore designed to protect against re
 ## What this project includes:
 
 * ROM based Root of Trust.
-* A custom bootloader running in Secure World, verified by the ROM bootloader using a public key stored in OTP.
+* A custom bootloader, verified by the ROM bootloader using a public key stored in OTP.
 * Signed firmware images, verified by custom bootloader before execution.
-* A/B partitions (1,5 MB each), for firmware images stored in Non-Secure World.
+* A/B partitions (1,5 MB each), for firmware images.
 * Rollback protection using OTP-stored minimum firmware version.
 * A simple HTTP server for OTA updates.
 * Scripts for building, signing and flashing firmware.
@@ -140,14 +140,6 @@ python3 -c "import json; otp=json.load(open('otp.json')); print(''.join(f'{b:02x
 sudo picotool otp load otp.json
 ```
 
-- If using WSL on Windows like me, expose RP2350 via usbipd before programming OTP
-```
-winget install usbipd
-usbipd list
-usbipd bind --busid <busid>
-usbipd attach --wsl --busid <busid>
-```
-
 # Programming OTP for rollback protection
 
 - Programming minimum firmware version for rollback protection in OTP. The first available memory address recommended for user content by the RP2350 datasheet was used (row 0x0c0). Setting bit 0 to 1 encodes a minimum firmware version of 1 using a thermometer code, the bootloader counts the number of set bits (popcount) to determine the minimum allowed version.
@@ -161,4 +153,13 @@ NOTE: Each time you want to flash a new firmware image with a new version:
 For version two this would look like this
 ```
 sudo picotool otp set 0x0c0 0x0003
+```
+
+### Quick tip for WSL users
+- If using WSL on Windows like me, expose RP2350 via usbipd before programming OTP. Make sure Pico is in BOOTSEL mode
+```
+winget install usbipd
+usbipd list
+usbipd bind --busid <busid>
+usbipd attach --wsl --busid <busid>
 ```
