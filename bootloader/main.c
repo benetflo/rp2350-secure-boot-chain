@@ -39,7 +39,7 @@ int main(void)
         // Verify OTA_METADATA struct
         uint8_t hash_calc[32] = {0};
         Hacl_Hash_SHA2_hash_256(hash_calc, (uint8_t*)meta, 8);
-        if (memcpy(hash_calc, meta->hash, 32) != 0)
+        if (memcmp_ct(hash_calc, meta->hash, 32) != 0)
         {
             // Metadata is corrupt, try other slot;
             goto try_other_slot;

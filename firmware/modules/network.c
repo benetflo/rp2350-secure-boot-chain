@@ -15,6 +15,9 @@
 #include "pico/multicore.h"
 #include "hardware/watchdog.h"
 
+#include "Hacl_Ed25519.h"
+#include "Hacl_Hash_SHA2.h"
+
 typedef struct
 {
 	const char * hostname;

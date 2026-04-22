@@ -34,9 +34,16 @@ function(add_firmware TARGET PARTITION_ID LINKER_SCRIPT BASE_ADDR HEADER_ADDR)
     add_executable(${TARGET}
         main.c
         ${CMAKE_CURRENT_SOURCE_DIR}/modules/network.c
+        ${ROOT_DIR}/libs/hacl-star/dist/portable-gcc-compatible/Hacl_Hash_SHA2.c
+        ${ROOT_DIR}/libs/hacl-star/dist/portable-gcc-compatible/Hacl_Ed25519.c
     )
 
-    target_include_directories(${TARGET} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/modules)
+    target_include_directories(${TARGET} PRIVATE 
+        ${CMAKE_CURRENT_SOURCE_DIR}/modules
+        ${ROOT_DIR}/libs/hacl-star/dist/portable-gcc-compatible
+        ${ROOT_DIR}/libs/hacl-star/dist/karamel/include
+        ${ROOT_DIR}/libs/hacl-star/dist/karamel/krmllib/dist/minimal
+    )
 
     target_link_libraries(${TARGET}
         pico_stdlib

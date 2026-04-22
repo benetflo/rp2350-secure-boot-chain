@@ -16,3 +16,12 @@ void *memset(void *dst, int c, size_t n) {
     while (n--) *d++ = (uint8_t)c;
     return dst;
 }
+
+int memcmp_ct(const void *a, const void *b, size_t n) 
+{
+    const uint8_t *pa = a;
+    const uint8_t *pb = b;
+    uint8_t diff = 0;
+    while (n--) diff |= *pa++ ^ *pb++;
+    return diff; // 0 == lika, annat == skiljer sig
+}
