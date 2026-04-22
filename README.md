@@ -27,7 +27,7 @@ The system enforces a continuous chain of trust from the immutable boot ROM to t
 > *Since this is my first security‑focused project, the system should not be considered perfectly secure. I have done my best to apply sound security principles and    make the design as robust as possible within my current experience and the scope of the project.*
 
 ### **Residual risk**: 
-Despite implemented protections (secure boot, A/B partitions, rollback protection, signature verification, TrustZone isolation etc.), the system may still contain unknown vulnerabilities or implementation bugs that have not been discovered during testing.
+Despite implemented protections (secure boot, A/B partitions, rollback protection, signature verification etc.), the system may still contain unknown vulnerabilities or implementation bugs that have not been discovered during testing.
 
 ### **Scope of testing**: 
 Testing has focused on the designed threat model and typical failure scenarios (invalid signatures, corrupted metadata, etc.). More advanced attacks (fault injection, side‑channel analysis, hardware probing) have not been tested, nor have security measures against them been implemented, because they fall outside the intended threat model.
