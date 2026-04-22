@@ -8,6 +8,12 @@ In this project, it is assumed that an attacker has physical access to the devic
 
 The implemented security mechanisms are therefore designed to protect against realistic, practical attacks within this scope, while acknowledging that highly sophisticated hardware attacks remain outside the intended threat model.
 
+### **OTA server**
+The OTA server is a minimal, intentionally insecure dummy implementation.
+A production‑grade OTA backend should include authentication, access control and secure transport.
+However, the simplified server is intentional in this project, as it makes it easier to clearly demonstrate that all critical security is enforced on‑device through the secure boot chain.
+Future work includes replacing the dummy server with a secure OTA backend once the focus shifts from demonstrating the boot chain to building a full production‑ready update system.
+
 ## What this project includes:
 
 * ROM based Root of Trust.
@@ -31,10 +37,6 @@ Despite implemented protections (secure boot, A/B partitions, rollback protectio
 
 #### **Scope of testing**: 
 Testing has focused on the designed threat model and typical failure scenarios (invalid signatures, corrupted metadata, etc.). More advanced attacks (fault injection, side‑channel analysis, hardware probing) have not been tested, nor have security measures against them been implemented, because they fall outside the intended threat model.
-
-#### **OTA server**
-The OTA server is a minimal, intentionally insecure dummy implementation.
-A real OTA backend should include authentication, access control and secure transport, but this simplified server is used to clearly demonstrate that all critical security is enforced on‑device through the secure boot chain.
 
 *The attacks tested in this project are demonstrated in this video:* LINK HERE
 
