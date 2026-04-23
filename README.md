@@ -24,19 +24,11 @@ The system enforces a continuous chain of trust from the immutable boot ROM to t
 
 # Security limitations
 
-> *Since this is my first security‑focused project, the system should not be considered perfectly secure. I have done my best to apply sound security principles and    make the design as robust as possible within my current experience and the scope of the project.*
+Since this is an educational first implementation of a secure boot chain, the system has been designed and tested within a defined threat model. Core security mechanisms such as secure boot, A/B partitions, rollback protection, and signature verification are implemented, but the system may still contain undiscovered implementation issues or vulnerabilities.
 
-### **Residual risk**: 
-Despite implemented protections (secure boot, A/B partitions, rollback protection, signature verification etc.), the system may still contain unknown vulnerabilities or implementation bugs that have not been discovered during testing.
+Testing has mainly focused on expected failure cases, such as invalid signatures and corrupted metadata. More advanced hardware attacks, like fault injection, side-channel analysis, and physical probing, are considered out of scope for this project and have not been evaluated.
 
-### **Scope of testing**: 
-Testing has focused on the designed threat model and typical failure scenarios (invalid signatures, corrupted metadata, etc.). More advanced attacks (fault injection, side‑channel analysis, hardware probing) have not been tested, nor have security measures against them been implemented, because they fall outside the intended threat model.
-
-### **OTA server**
-The OTA server is a minimal, intentionally insecure dummy implementation.
-A production‑grade OTA backend should include authentication, access control and secure transport.
-However, the simplified server is intentional in this project, as it makes it easier to clearly demonstrate that all critical security is enforced on‑device through the secure boot chain.
-Future work includes replacing the dummy server with a secure OTA backend once the focus shifts from demonstrating the boot chain to building a full production‑ready update system.
+The OTA server is intentionally kept minimal and not production-ready, and is only meant to demonstrate the secure boot chain, with all critical trust decisions enforced on the device itself.
 
 ### *The attacks tested in this project are demonstrated in this video:* LINK HERE
 
