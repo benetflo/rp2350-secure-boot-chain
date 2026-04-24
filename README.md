@@ -96,10 +96,9 @@ bundle install
 ruby main.rb
 ```
 
+<br><br>
 
-============================================================================================
 # CRITICAL SECTION, ERRORS HERE COULD BRICK SOME FEATURES OF SECURE BOOT
-============================================================================================
 
 > **DISCLAIMER:** This guide is provided as-is for educational purposes. I take no responsibility 
 > for bricked devices, lost keys, or any other damages resulting from following these instructions. 
