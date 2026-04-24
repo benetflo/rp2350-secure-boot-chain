@@ -146,7 +146,6 @@ sudo picotool otp set 0x0c0 0x0001
 ```
 
 NOTE: Each time you want to flash a new firmware image with a new version:
-- Update firmware versions in "config.h" and "http_server/versions.json".
 - Burn the next bit in OTP register IF you want to permanently block earlier versions from running.
 For version two this would look like this
 ```
