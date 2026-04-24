@@ -4,9 +4,10 @@ This project was part of my Examensarbete/YH thesis for the IoT- & Embedded deve
 
 # About the project
 
-In this project, it is assumed that an attacker has physical access to the device and may use basic or commonly available tools to attempt to compromise the system. The attacker is not assumed to possess advanced laboratory‑grade equipment or specialized expertise such as fault‑injection rigs, side‑channel analysis tools, chip decapsulation capabilities, or other high‑cost hardware attack platforms.
+In this project, it is assumed that an attacker has physical access to the device and may use basic or commonly available tools to try to compromise the system. The attacker is not assumed to have access to advanced laboratory equipment or specialized techniques such as fault injection, side-channel analysis, or chip decapsulation.
+The threat model also includes the possibility that the OTA update server could be compromised. An attacker may try to upload and distribute malicious or unauthorized firmware to the device. For this reason, the OTA server is treated as an untrusted component, and no security decisions rely on it. All firmware is verified on the device before it is allowed to run.
 
-The implemented security mechanisms are therefore designed to protect against realistic, practical attacks within this scope, while acknowledging that highly sophisticated hardware attacks remain outside the intended threat model.
+The security mechanisms in this project are designed to protect against realistic, practical attacks within this scope, while more advanced hardware attacks are considered out of scope.
 
 ## What this project includes:
 
