@@ -11,10 +11,14 @@ version = int(sys.argv[3]) if len(sys.argv) > 3 else 1
 
 fw_size = os.path.getsize(fw_path)
 
-# Build header: magic, version, size
-header = struct.pack("<III", FW_MAGIC, fw_size, version)
+# typedef struct {
+#     uint32_t magic;
+#     uint32_t size;
+#     uint16_t version;
+# } fw_header_t;
 
-# Padding to whole page
+header = struct.pack("<IIH", FW_MAGIC, fw_size, version) + b"\xFF\xFF"
+
 header = header.ljust(FLASH_PAGE_SIZE, b"\xFF")
 
 with open(out_path, "wb") as f:
