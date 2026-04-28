@@ -1,13 +1,12 @@
-# RP2350 Secure Boot Chain
-
-This project was part of my Examensarbete/YH thesis for the IoT- & Embedded developer program at JENSEN Yrkeshögskola in Stockholm. This is my implementation of a secure boot chain on the Raspberry Pi Pico 2 (RP2350). 
-
 # About the project
 
-In this project, it is assumed that an attacker has physical access to the device and may use basic or commonly available tools to try to compromise the system. The attacker is not assumed to have access to advanced laboratory equipment or specialized techniques such as fault injection, side-channel analysis, or chip decapsulation.
-The threat model also includes the possibility that the OTA update server could be compromised. An attacker may try to upload and distribute malicious or unauthorized firmware to the device. For this reason, the OTA server is treated as an untrusted component, and no security decisions rely on it. All firmware is verified on the device before it is allowed to run.
+This project was part of my Examensarbete/YH thesis for the IoT- & Embedded developer program at JENSEN Yrkeshögskola in Stockholm. This is my implementation of a secure boot chain on the Raspberry Pi Pico 2 (RP2350). The goal is to build a practical, working example of how a secure‑boot process can be designed and validated on a real device.
 
-The security mechanisms in this project are designed to protect against realistic, practical attacks within this scope, while more advanced hardware attacks are considered out of scope.
+A custom bootloader verifies firmware signatures, checks metadata, enforces versioning rules, and manages an A/B update layout with rollback protection. The system ensures that only authenticated and integrity‑protected firmware is allowed to run.
+
+The boot process is designed to handle realistic failure scenarios such as corrupted images, incomplete OTA updates, and invalid headers. All verification happens on‑device, and the OTA server is treated as an untrusted component. Firmware is only accepted if its signature, header, and version information are valid; otherwise, the bootloader falls back to the alternate slot or enters a safe error state.
+
+This project is not meant to be a full production‑grade security solution, but rather a learning‑focused implementation that demonstrates the core concepts of secure boot, firmware authentication, safe OTA updates, and rollback protection in practice.
 
 ## What this project includes:
 
