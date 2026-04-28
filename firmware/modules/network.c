@@ -36,6 +36,8 @@ static uint32_t flash_page_buf_len = 0;
 static uint32_t total_bytes_recv = 0;
 static int ota_skip = 0;
 static int flash_erased = 0;
+static uint8_t version_buf[4];
+static int version_filled = 0;
 
 int wifi_connect(char *ssid, char *password)
 {
@@ -185,6 +187,15 @@ static int handle_payload (struct pbuf * p)
 		uint8_t * data = (uint8_t *)temp->payload;
 		size_t length = temp->len;
 
+        if (!version_filled) 
+        {
+            size_t copy = length > 4 ? 4 : length;
+            memcpy(version_buf, data, copy);
+            version_filled = 1;
+
+            data += copy;
+            length -= copy;
+        }
 		flash_write_chunk(data, length);
 		temp = temp->next;
 	}
@@ -284,8 +295,8 @@ static void internal_result_fn(void * arg, httpc_result_t httpc_result, u32_t rx
     // Calculate firmware size (excluding signature)
     uint32_t fw_size = total_bytes_recv - 64;
     
-    // Set firmware version from config
-    uint32_t fw_version = FIRMWARE_VERSION; 
+    // Set firmware version
+    uint32_t fw_version = *(uint32_t*)version_buf; 
 
     // Prepare firmware header
     fw_header_t fw_header = {0};
