@@ -31,7 +31,7 @@ Testing has mainly focused on expected failure cases, such as invalid signatures
 
 The OTA server is intentionally kept minimal and not production-ready, and is only meant to demonstrate the secure boot chain, with all critical trust decisions enforced on the device itself.
 
-### *The attacks tested in this project are demonstrated in this video:* LINK HERE
+### *The attacks tested in this project are demonstrated in this [video](https://youtu.be/aSPZq3tKgkI?si=sQaqq6llWd9MbziV):*
 
 # Guide for using this project
 
