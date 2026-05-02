@@ -1,3 +1,5 @@
+# Secure Boot Chain for RP2350 with Signed Firmware, A/B Updates, and Rollback Protection
+
 # About the project
 
 This project was part of my Examensarbete/YH thesis for the IoT- & Embedded developer program at JENSEN Yrkeshögskola in Stockholm. This is my implementation of a secure boot chain on the Raspberry Pi Pico 2 (RP2350). The goal is to build a practical, working example of how a secure‑boot process can be designed and validated on a real device.
@@ -21,6 +23,20 @@ This project is not meant to be a full production‑grade security solution, but
 ## Chain of Trust
 
 The system enforces a continuous chain of trust from the immutable boot ROM to the application firmware. Each stage verifies the integrity and authenticity of the next stage, ensuring that only authorized and integrity‑checked code is executed on the device.
+
+┌──────────────┐
+│     ROM       │   Immutable root of trust
+└───────┬──────┘
+        │ verifies
+        ▼
+┌──────────────┐
+│  Bootloader   │   Verifies signatures, metadata, header
+└───────┬──────┘
+        │ verifies
+        ▼
+┌──────────────┐
+│   Firmware    │   Runs only if authenticated
+└──────────────┘
 
 # Security limitations
 
