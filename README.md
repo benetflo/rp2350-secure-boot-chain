@@ -183,13 +183,3 @@ However, they are recommended when locking down a device for real‑world use.
 - **Enable glitch detector** —> provides hardware‑level protection against fault‑injection attacks  
 
 These features are intentionally left disabled here to keep the device debuggable and to allow firmware development and testing.
-
-
-### Quick tip for WSL users
-- If using WSL on Windows like me, expose RP2350 via usbipd before programming OTP. Make sure Pico is in BOOTSEL mode
-```
-winget install usbipd
-usbipd list
-usbipd bind --busid <busid>
-usbipd attach --wsl --busid <busid>
-```
