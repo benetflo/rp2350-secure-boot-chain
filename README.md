@@ -171,6 +171,20 @@ Burn the next bit if you want to permanently block older versions. For version t
 sudo picotool otp set 0x0c0 0x0003
 ```
 
+## Optional production‑hardening (not used in this project)
+
+The RP2350 includes several additional security features intended for production‑grade secure‑boot deployments.  
+These are **not enabled in this project**, since this is an educational implementation and development access is required.  
+However, they are recommended when locking down a device for real‑world use.
+
+- **KEY_INVALID** —> revoke unused boot keys and prevent new keys from being added later  
+- **Disable USB/UART boot modes** —> reduces attack surface by removing alternative boot paths  
+- **Disable debug access** (`DEBUG_DISABLE` / `SECURE_DEBUG_DISABLE`) —> prevents attaching a debugger after deployment  
+- **Enable glitch detector** —> provides hardware‑level protection against fault‑injection attacks  
+
+These features are intentionally left disabled here to keep the device debuggable and to allow firmware development and testing.
+
+
 ### Quick tip for WSL users
 - If using WSL on Windows like me, expose RP2350 via usbipd before programming OTP. Make sure Pico is in BOOTSEL mode
 ```
