@@ -24,6 +24,7 @@ This project is not meant to be a full production‑grade security solution, but
 
 The system enforces a continuous chain of trust from the immutable boot ROM to the application firmware. Each stage verifies the integrity and authenticity of the next stage, ensuring that only authorized and integrity‑checked code is executed on the device.
 
+```
 ┌──────────────┐
 │     ROM       │   Immutable root of trust
 └───────┬──────┘
@@ -37,7 +38,7 @@ The system enforces a continuous chain of trust from the immutable boot ROM to t
 ┌──────────────┐
 │   Firmware    │   Runs only if authenticated
 └──────────────┘
-
+```
 
 # Security limitations
 
