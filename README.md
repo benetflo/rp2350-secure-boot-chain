@@ -26,17 +26,17 @@ The system enforces a continuous chain of trust from the immutable boot ROM to t
 
 ```
 ┌──────────────┐
-│     ROM       │   Immutable root of trust
+│     ROM      │   Immutable root of trust
 └───────┬──────┘
         │ verifies
         ▼
 ┌──────────────┐
-│  Bootloader   │   Verifies signatures, metadata, header
+│  Bootloader  │   Verifies signatures, metadata, header
 └───────┬──────┘
         │ verifies
         ▼
 ┌──────────────┐
-│   Firmware    │   Runs only if authenticated
+│   Firmware   │   Runs only if authenticated
 └──────────────┘
 ```
 
@@ -124,40 +124,41 @@ ruby main.rb
 
 # Activating secure boot on RP2350.
 
-- Create keys (signing of bootloader is done during build stage)
+## 1. Create bootloader signing keys
+*(Signing of the bootloader is done during the build stage)*
 ```
 openssl ecparam -name secp256k1 -genkey -noout -out bootloader_private_key.pem
 openssl ec -in bootloader_private_key.pem -pubout -out bootloader_public_key.pem
 ```
 
-- Create and generate firmware keys while we are at it :)
+## 2. Create firmware signing keys
 ```
 openssl genpkey -algorithm ed25519 -out firmware_private_key.pem
 openssl pkey -in firmware_private_key.pem -pubout -out firmware_public_key.pem
 ```
 
-- Build project
+## 3. Build the project
 ```
 make
 ```
 
-## NOTE: FLASH BOOTLOADER AND FIRMWARE TO CHECK THAT EVERYTHING IS WORKING BEFORE PROGRAMMING OTP.
+## 4. Verify everything before programming OTP  
+Flash the bootloader and firmware first to ensure everything works correctly.
 
-- Verify that key-hash is correct (should be the same)
+### Verify that the bootloader key hash matches
 ```
 openssl ec -in bootloader_private_key.pem -pubout -outform DER | tail -c 65 | tail -c 64 | sha256sum
 python3 -c "import json; otp=json.load(open('otp.json')); print(''.join(f'{b:02x}' for b in otp['bootkey0']))"
 ```
 
-
-- Program OTP and burn bootloader key PERMANENTLY
+## 5. Program OTP and burn the bootloader key permanently
 ```
 sudo picotool otp load otp.json
 ```
 
 # Programming OTP for rollback protection
 
-- Programming minimum firmware version for rollback protection in OTP. The first available memory address recommended for user content by the RP2350 datasheet was used (row 0x0c0). Setting bit 0 to 1 encodes a minimum firmware version of 1 using a thermometer code, the bootloader counts the number of set bits (popcount) to determine the minimum allowed version.
+## Programming minimum firmware version for rollback protection in OTP. The first available memory address recommended for user content by the RP2350 datasheet was used (row 0x0c0). Setting bit 0 to 1 encodes a minimum firmware version of 1 using a thermometer code, the bootloader counts the number of set bits (popcount) to determine the minimum allowed version.
 ```
 sudo picotool otp set 0x0c0 0x0001
 ```
