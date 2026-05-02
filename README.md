@@ -60,14 +60,14 @@ The OTA server is intentionally kept minimal and not production-ready, and is on
 - Pico SDK
 - ruby & ruby bundler
 
-# SETUP
+# Setup
 
-- Clone this repository
+## 1. Clone this repository
 ```
 git clone --recurse-submodules https://github.com/benetflo/pico2-secure-bootchain.git
 ```
 
-- Install Pico SDK and add to PATH
+## 2. Install Pico SDK and add to PATH
 ```
 cd ~
 git clone https://github.com/raspberrypi/pico-sdk.git
@@ -77,7 +77,7 @@ echo 'export PICO_SDK_PATH=~/pico-sdk' >> ~/.bashrc
 source ~/.bashrc
 ```
 
-- Install Picotool
+## 3. Install Picotool
 ```
 cd ~
 git clone --recurse-submodules https://github.com/raspberrypi/picotool.git
@@ -89,7 +89,8 @@ cmake .. -DPICO_SDK_PATH=~/pico-sdk
 make -j$(nproc)
 sudo make install
 ```
-- Create a config.h file in the root directory of this repo
+
+## 4. Create a config.h file in the root directory of this repo
 ```
 #ifndef CONFIG_H
 #define CONFIG_H
@@ -105,7 +106,7 @@ sudo make install
 #endif
 ```
 
-# Setup and run HTTP server
+## 5. Setup and run HTTP server
 ```
 cd http_server
 sudo apt install ruby ruby-bundler
@@ -158,14 +159,14 @@ sudo picotool otp load otp.json
 
 # Programming OTP for rollback protection
 
-## Programming minimum firmware version for rollback protection in OTP. The first available memory address recommended for user content by the RP2350 datasheet was used (row 0x0c0). Setting bit 0 to 1 encodes a minimum firmware version of 1 using a thermometer code, the bootloader counts the number of set bits (popcount) to determine the minimum allowed version.
+## Programming minimum firmware version for rollback protection in OTP. 
+The first available memory address recommended for user content by the RP2350 datasheet was used (row 0x0c0). Setting bit 0 to 1 encodes a minimum firmware version of 1 using a thermometer code, the bootloader counts the number of set bits (popcount) to determine the minimum allowed version.
 ```
 sudo picotool otp set 0x0c0 0x0001
 ```
 
-NOTE: Each time you want to flash a new firmware image with a new version:
-- Burn the next bit in OTP register IF you want to permanently block earlier versions from running.
-For version two this would look like this
+## Updating to a new firmware version  
+Burn the next bit if you want to permanently block older versions. For version two this would look like this:
 ```
 sudo picotool otp set 0x0c0 0x0003
 ```
