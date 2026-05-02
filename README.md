@@ -38,6 +38,7 @@ The system enforces a continuous chain of trust from the immutable boot ROM to t
 │   Firmware    │   Runs only if authenticated
 └──────────────┘
 
+
 # Security limitations
 
 Since this is an educational first implementation of a secure boot chain, the system has been designed and tested within a defined threat model. Core security mechanisms such as secure boot, A/B partitions, rollback protection, and signature verification are implemented, but the system may still contain undiscovered implementation issues or vulnerabilities.
