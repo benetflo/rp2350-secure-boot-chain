@@ -8,10 +8,10 @@ sig_file = sys.argv[2]
 out_file = sys.argv[3]
 key_path = sys.argv[4] if len(sys.argv) > 4 else '../firmware_private_key.pem'
 
-# SHA-256 hash av firmware
+# SHA-256 hash of firmware
 fw_hash = hashlib.sha256(fw).digest()
 
-# Signera hashen
+# Sign hash
 with open('/tmp/fw_hash.bin', 'wb') as f:
     f.write(fw_hash)
 
