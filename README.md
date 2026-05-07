@@ -170,6 +170,7 @@ Burn the next bit if you want to permanently block older versions. For version t
 ```
 sudo picotool otp set 0x0c0 0x0003
 ```
+In production, programming of the next bit is typically done in a secure update step, since OTP updates must be strictly controlled and only performed after authenticated firmware validation.
 
 ## Optional production‑hardening (not used in this project)
 
